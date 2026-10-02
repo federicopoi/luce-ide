@@ -64,14 +64,15 @@ try{
  assert.equal((await page.evaluate(()=>window.orbit.getState())).projects.find(p=>p.id===p1.id).layout,1);
  if(process.env.ORBIT_PROVIDER_SMOKE){
   for(const provider of ['codex','claude']){
-   const created=await page.evaluate(({projectId,provider})=>window.orbit.createTerminal({projectId,provider}),{projectId:p1.id,provider});assert.match(created.conversationId,/^[a-zA-Z0-9_-]{8,128}$/);
+   const created=await page.evaluate(({projectId,provider})=>window.orbit.createTerminal({projectId,provider}),{projectId:p1.id,provider});if(provider==='claude')assert.match(created.conversationId,/^[a-zA-Z0-9_-]{8,128}$/);else assert.equal(created.conversationId,null);
    await until(()=>page.evaluate(async id=>(await window.orbit.getTerminal(id)).buffer.length>100,created.id));
-   assert.equal((await page.evaluate(id=>window.orbit.getTerminal(id),created.id)).status,'running');
-   const resumed=await page.evaluate(({projectId,provider,conversationId})=>window.orbit.createTerminal({projectId,provider,conversationId}),{projectId:p1.id,provider,conversationId:created.conversationId});assert.equal(resumed.id,created.id);
+   await new Promise(resolve=>setTimeout(resolve,10000));
+   const startup=await page.evaluate(id=>window.orbit.getTerminal(id),created.id);assert.equal(startup.status,'running',startup.buffer);assert.doesNotMatch(startup.buffer,/No saved session found|ERROR:/);
+   if(provider==='claude'){const resumed=await page.evaluate(({projectId,provider,conversationId})=>window.orbit.createTerminal({projectId,provider,conversationId}),{projectId:p1.id,provider,conversationId:created.conversationId});assert.equal(resumed.id,created.id);}
    await page.evaluate(({id,title})=>window.orbit.renameTerminal(id,title),{id:created.id,title:`Test ${provider}`});
-   const prefs=(await page.evaluate(()=>window.orbit.getState())).projects.find(p=>p.id===p1.id);assert.equal(prefs.conversationNames[`${provider}:${created.conversationId}`],`Test ${provider}`);
+   const prefs=(await page.evaluate(()=>window.orbit.getState())).projects.find(p=>p.id===p1.id);if(created.conversationId)assert.equal(prefs.conversationNames[`${provider}:${created.conversationId}`],`Test ${provider}`);
   }
-  console.log('PASS: installed Codex and Claude startup, persistent IDs, live resume reuse, saved labels');
+  console.log('PASS: installed Codex normal startup, Claude startup/identity/resume, terminal labels');
  }
  assert.deepEqual(errors,[]);console.log('PASS: projects, real PTY, switching/reload, embedded local preview, fullscreen/return, isolation and unsafe URL rejection');
 }finally{

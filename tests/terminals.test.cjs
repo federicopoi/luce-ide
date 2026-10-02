@@ -38,3 +38,12 @@ test('resuming an Orbit-owned live conversation reuses its process',t=>{
  assert.throws(()=>manager.create(project,{provider:'codex'}),/installed|found/i);
  assert.throws(()=>manager.create({...project,directory:'/orbit-folder-does-not-exist'},{provider:'shell'}),/folder|directory/i);
 });
+
+test('new Codex starts normally and saved Codex resumes by ID',async t=>{
+ const {manager,project}=setup(t);const executable=path.join(project.directory,'codex fixture');
+ fs.writeFileSync(executable,`#!/usr/bin/env node\nconsole.log('ARGS:'+JSON.stringify(process.argv.slice(2)));setInterval(()=>{},1000);`,{mode:0o755});manager.executables.codex=executable;
+ const fresh=manager.create(project,{provider:'codex'});await until(()=>manager.get(fresh.id).buffer.includes('ARGS:[]'));
+ assert.equal(fresh.conversationId,null);assert.equal(fresh.status,'running');
+ const saved=manager.create(project,{provider:'codex',conversationId:'12345678-1234-1234-1234-123456789012'});
+ await until(()=>manager.get(saved.id).buffer.includes('ARGS:["resume","12345678-1234-1234-1234-123456789012"]'));
+});

@@ -7,7 +7,6 @@ const {TerminalManager}=require('./terminals.cjs');
 const {resolveEnvironment}=require('./environment.cjs');
 const {previewURL}=require('./validation.cjs');
 const {Preview}=require('./preview.cjs');
-const {createCodexThread}=require('./sessions.cjs');
 app.setName('Orbit');
 if(process.env.ORBIT_PROFILE){fs.mkdirSync(process.env.ORBIT_PROFILE,{recursive:true});app.setPath('userData',process.env.ORBIT_PROFILE);}
 let window,store,terminals,environment,preview,quitting=false,quitPending=false,history={sessions:[],projects:[]},historyLoading=false,discoveryPromise;
@@ -28,7 +27,7 @@ function registerIPC(){
   const result=store.updateProject(id,allowed);changed();return result;});
  handle('remove-project',async id=>{const p=project(id);const active=terminals.list().filter(s=>s.projectId===id&&s.status==='running');const {response}=await dialog.showMessageBox(window,{type:'question',message:`Remove ${p.name} from Orbit?`,detail:active.length?`This stops ${active.length} running terminal(s). Project files and agent history are kept.`:'Project files and agent history are kept.',buttons:['Cancel','Remove project'],defaultId:0,cancelId:0});if(response!==1)return false;await Promise.all(terminals.list().filter(s=>s.projectId===id).map(s=>terminals.forget(s.id)));store.removeProject(id);preview.hide();changed();return true;});
  handle('history',async()=>{await refresh();return snapshot();});
- handle('create-terminal',async options=>{if(!options||typeof options!=='object')throw Error('Invalid terminal options.');const p=project(options.projectId);if(options.title!==undefined&&(typeof options.title!=='string'||options.title.length>200))throw Error('Invalid terminal title.');if(options.provider==='codex'&&!options.conversationId){options={...options,conversationId:await createCodexThread(environment.executables.codex,p.directory,environment.env)};}return terminals.create(p,options);});
+ handle('create-terminal',async options=>{if(!options||typeof options!=='object')throw Error('Invalid terminal options.');const p=project(options.projectId);if(options.title!==undefined&&(typeof options.title!=='string'||options.title.length>200))throw Error('Invalid terminal title.');return terminals.create(p,options);});
  handle('get-terminal',id=>terminals.get(id));handle('write-terminal',(id,data)=>terminals.write(id,data));handle('resize-terminal',(id,cols,rows)=>terminals.resize(id,cols,rows));
  handle('rename-terminal',(id,title)=>{const s=terminals.rename(id,title);if(s.conversationId){const p=project(s.projectId);store.updateProject(p.id,{conversationNames:{...p.conversationNames,[`${s.provider}:${s.conversationId}`]:s.title}});}changed();return s;});
  handle('close-terminal',async id=>{const s=terminals.get(id);if(s.status==='running'){const {response}=await dialog.showMessageBox(window,{type:'question',message:`Close ${s.title}?`,detail:'This stops the running terminal. Agent conversations can be resumed from history.',buttons:['Cancel','Close terminal'],defaultId:0,cancelId:0});if(response!==1)return false;}await terminals.forget(id);refresh();return true;});

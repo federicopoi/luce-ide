@@ -12,6 +12,8 @@ Open `~/Applications/Orbit.app`. Add a project folder, or choose **Find local se
 - **Preview:** run your website's dev server, then use the pane's Preview button. You can also enter a URL in the preview toolbar. Expand hides the sidebars; Back to terminal restores the running terminals.
 - **Project options:** rename a project or remove it from Orbit without deleting its files.
 
+New Codex conversations launch the normal CLI. They appear in saved history once Codex persists them after use; Orbit does not create empty sessions through app-server.
+
 | Shortcut | Action |
 | --- | --- |
 | ⌘ O | Add project |

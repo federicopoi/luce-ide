@@ -15,7 +15,6 @@ class TerminalManager extends EventEmitter {
   try{if(!fs.statSync(project.directory).isDirectory())throw Error();}catch{throw Error('This project folder is missing. Choose an existing folder.');}
   const newSession=provider==='claude'&&!conversationId;if(newSession)conversationId=randomUUID();
   const spec=provider==='shell'?{file:this.shell,args:['-l']}:launchSpec(provider,conversationId,this.executables,{newSession});
-  if(provider==='codex'&&!conversationId)throw Error('Create a Codex conversation before opening its terminal.');
   const child=pty.spawn(spec.file,spec.args,{cwd:project.directory,env:this.env,name:'xterm-256color',cols:Math.max(2,Math.min(500,Number(cols)||90)),rows:Math.max(2,Math.min(300,Number(rows)||24))});
   const s={id:randomUUID(),projectId:project.id,provider,conversationId,title:title||({shell:'Project shell',codex:'Codex conversation',claude:'Claude conversation'}[provider]),status:'running',previewURL:'',createdAt:new Date().toISOString(),buffer:'',outputOffset:0,scanTail:'',child};
   this.sessions.set(s.id,s);
