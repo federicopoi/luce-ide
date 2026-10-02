@@ -14,7 +14,7 @@ try{
  const options={args:[path.resolve('.')],env:{...process.env,ORBIT_PROFILE:path.join(root,'profile'),ORBIT_TEST:'1'},timeout:30000};
  if(process.env.ORBIT_EXECUTABLE){options.executablePath=process.env.ORBIT_EXECUTABLE;options.args=[];}
  app=await electron.launch(options);const page=await app.firstWindow();page.on('pageerror',error=>errors.push(error.message));
- await page.getByText('Your projects. Your conversations.',{exact:true}).waitFor();
+ await page.getByText('Open a project',{exact:true}).waitFor();
  const p1=await page.evaluate(dir=>window.orbit.addProject(dir),first);const p2=await page.evaluate(dir=>window.orbit.addProject(dir),second);
  await page.evaluate(id=>window.orbit.selectProject(id),p1.id);await page.locator('[data-project-id="'+p1.id+'"]').click();
  const session=await page.evaluate(id=>window.orbit.createTerminal({projectId:id,provider:'shell'}),p1.id);
