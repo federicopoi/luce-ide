@@ -22,4 +22,6 @@ Final fixed: preview recovery — stopped-server/restart/Reload smoke timed out 
 Final fixed: malformed history — mixed null records/content dropped both fixture sessions before fix; individual invalid values are skipped and both sessions appear.
 Final suite: 11/11 unit tests pass; extended Electron smoke passes including actual keyboard and installed providers, with no model inference requested.
 Final minor (deferred): reduce history-cache memory by retaining compact metadata instead of parsed transcript excerpts. Reads and entry count remain bounded; startup discovery completed in under a second on this machine.
+Installed-copy verification: Node fs.cp default rewrote 14 framework symlinks to absolute source paths, breaking strict signing and standalone use. Actual installed signature and link checks failed; installer now preserves literal symlinks and a standalone verification script checks both boundaries.
 Dependency fix: node-pty's packaged spawn-helper arrived without executable mode. Postinstall restores 0755; packaging will run it too.
+Task 4: complete — installed-copy link/signature validation and Electron integration smoke pass. Orbit installed in ~/Applications and opened for user testing. Removed the invalid first-install backup created during this task. Source retained on orbit-build.
