@@ -7,3 +7,5 @@ Pre-flight: store/history data consumed by terminal manager and IPC; terminal ma
 Tasks: 1 data; 2 terminals; 3 app and preview; 4 package/review/install.
 Task 1: complete — 6 data tests pass, including database-only Codex history.
 Task 1 test correction: macOS temporary paths resolve through /private; fixture assertion now compares canonical directories as required by the spec.
+Task 2: complete — real PTY input/output, physical cwd, resize, local URL detection, live resume reuse and missing CLI/folder checks pass.
+Dependency fix: node-pty's packaged spawn-helper arrived without executable mode. Postinstall restores 0755; packaging will run it too.
