@@ -10,25 +10,27 @@ const {Preview}=require('./preview.cjs');
 const {findLocalServers,reachable}=require('./servers.cjs');
 let scanningServers=false;
 async function scanServers(){if(scanningServers||!store||!terminals)return;scanningServers=true;try{const projects=store.snapshot().projects;const servers=await findLocalServers(projects.map(p=>p.directory));await Promise.all(terminals.list().map(async s=>{const p=projects.find(p=>p.id===s.projectId);const own=s.previewURL&&await reachable(s.previewURL)?s.previewURL:null;terminals.updatePreviewAvailability(s.id,own||servers.get(p?.directory)||null);}));}finally{scanningServers=false;}}
-app.setName('Orbit');
-if(process.env.ORBIT_PROFILE){fs.mkdirSync(process.env.ORBIT_PROFILE,{recursive:true});app.setPath('userData',process.env.ORBIT_PROFILE);}
+app.setName('Luce');
+// Keep the original profile to preserve projects, Chromium storage and browser sessions.
+const profile=process.env.LUCE_PROFILE||process.env.ORBIT_PROFILE||path.join(app.getPath('appData'),'Orbit');
+fs.mkdirSync(profile,{recursive:true});app.setPath('userData',profile);
 let window,store,terminals,environment,preview,quitting=false,quitPending=false,history={sessions:[],projects:[]},historyLoading=false,discoveryPromise;
 if(!app.requestSingleInstanceLock())app.quit();
 app.on('second-instance',()=>{window?.show();window?.focus();});
-function send(name,value){if(window&&!window.isDestroyed())window.webContents.send(`orbit:${name}`,value);}
+function send(name,value){if(window&&!window.isDestroyed())window.webContents.send(`luce:${name}`,value);}
 function snapshot(){return {...store.snapshot(),terminals:terminals.list(),history:history.sessions,discoveredProjects:history.projects,historyLoading,providers:{codex:!!environment.executables.codex,claude:!!environment.executables.claude}};}
 function changed(){send('state-changed',snapshot());}
 async function refresh(){if(discoveryPromise)return discoveryPromise;historyLoading=true;changed();discoveryPromise=discover().then(result=>{history=result;}).catch(error=>{send('preview-event',{status:'notice',message:error.message});}).finally(()=>{historyLoading=false;discoveryPromise=null;changed();});return discoveryPromise;}
 function project(id){if(typeof id!=='string')throw Error('Invalid project.');const p=store.snapshot().projects.find(p=>p.id===id);if(!p)throw Error('Project not found.');return p;}
-function handle(name,fn){ipcMain.handle(`orbit:${name}`,async(event,...args)=>{if(!window||event.sender!==window.webContents||event.senderFrame!==window.webContents.mainFrame)throw Error('This request did not come from Orbit.');return fn(...args);});}
+function handle(name,fn){ipcMain.handle(`luce:${name}`,async(event,...args)=>{if(!window||event.sender!==window.webContents||event.senderFrame!==window.webContents.mainFrame)throw Error('This request did not come from Luce.');return fn(...args);});}
 function registerIPC(){
  handle('state',()=>snapshot());
- handle('add-project',async directory=>{if(directory===undefined||directory===null){const result=await dialog.showOpenDialog(window,{title:'Add a project to Orbit',properties:['openDirectory','createDirectory'],buttonLabel:'Add project'});if(result.canceled)return null;directory=result.filePaths[0];}const p=store.addProject(directory);preview.hide();changed();return p;});
+ handle('add-project',async directory=>{if(directory===undefined||directory===null){const result=await dialog.showOpenDialog(window,{title:'Add a project to Luce',properties:['openDirectory','createDirectory'],buttonLabel:'Add project'});if(result.canceled)return null;directory=result.filePaths[0];}const p=store.addProject(directory);preview.hide();changed();return p;});
  handle('select-project',id=>{project(id);store.setSelected(id);preview.hide();changed();return snapshot();});
  handle('update-project',(id,patch)=>{project(id);if(!patch||typeof patch!=='object'||Array.isArray(patch))throw Error('Invalid project settings.');const allowed={};if(patch.name!==undefined)allowed.name=patch.name;if(patch.layout!==undefined)allowed.layout=patch.layout;if(patch.previewURL!==undefined)allowed.previewURL=patch.previewURL?previewURL(patch.previewURL):'';
   if(patch.conversationNames!==undefined){if(!patch.conversationNames||typeof patch.conversationNames!=='object'||Array.isArray(patch.conversationNames))throw Error('Invalid conversation names.');allowed.conversationNames={};for(const [key,value]of Object.entries(patch.conversationNames)){if(key.length>200||typeof value!=='string')throw Error('Invalid conversation name.');allowed.conversationNames[key]=value.trim().slice(0,100);}}
   const result=store.updateProject(id,allowed);changed();return result;});
- handle('remove-project',async id=>{const p=project(id);const active=terminals.list().filter(s=>s.projectId===id&&s.status==='running');const {response}=await dialog.showMessageBox(window,{type:'question',message:`Remove ${p.name} from Orbit?`,detail:active.length?`This stops ${active.length} running terminal(s). Project files and agent history are kept.`:'Project files and agent history are kept.',buttons:['Cancel','Remove project'],defaultId:0,cancelId:0});if(response!==1)return false;await Promise.all(terminals.list().filter(s=>s.projectId===id).map(s=>terminals.forget(s.id)));store.removeProject(id);preview.hide();changed();return true;});
+ handle('remove-project',async id=>{const p=project(id);const active=terminals.list().filter(s=>s.projectId===id&&s.status==='running');const {response}=await dialog.showMessageBox(window,{type:'question',message:`Remove ${p.name} from Luce?`,detail:active.length?`This stops ${active.length} running terminal(s). Project files and agent history are kept.`:'Project files and agent history are kept.',buttons:['Cancel','Remove project'],defaultId:0,cancelId:0});if(response!==1)return false;await Promise.all(terminals.list().filter(s=>s.projectId===id).map(s=>terminals.forget(s.id)));store.removeProject(id);preview.hide();changed();return true;});
  handle('history',async()=>{await refresh();return snapshot();});
  handle('create-terminal',async options=>{if(!options||typeof options!=='object')throw Error('Invalid terminal options.');const p=project(options.projectId);if(options.title!==undefined&&(typeof options.title!=='string'||options.title.length>200))throw Error('Invalid terminal title.');return terminals.create(p,options);});
  handle('get-terminal',id=>terminals.get(id));handle('write-terminal',(id,data)=>terminals.write(id,data));handle('resize-terminal',(id,cols,rows)=>terminals.resize(id,cols,rows));
@@ -38,7 +40,7 @@ function registerIPC(){
  handle('hide-preview',()=>preview.hide());handle('preview-bounds',bounds=>preview.setBounds(bounds));handle('reload-preview',()=>preview.reload());
 }
 function createWindow(){
- window=new BrowserWindow({width:1480,height:940,minWidth:960,minHeight:640,backgroundColor:'#171819',title:'Orbit',titleBarStyle:'hidden',trafficLightPosition:{x:16,y:15},webPreferences:{preload:path.join(__dirname,'preload.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false}});
+ window=new BrowserWindow({width:1480,height:940,minWidth:960,minHeight:640,backgroundColor:'#171819',title:'Luce',titleBarStyle:'hidden',trafficLightPosition:{x:16,y:15},webPreferences:{preload:path.join(__dirname,'preload.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false}});
  preview=new Preview(window,event=>send('preview-event',event));window.webContents.setWindowOpenHandler(()=>({action:'deny'}));window.webContents.on('will-navigate',e=>e.preventDefault());
  window.webContents.on('did-start-loading',()=>preview.hide());
  window.on('close',event=>{if(!quitting){event.preventDefault();preview.hide();window.hide();}});
@@ -46,7 +48,7 @@ function createWindow(){
  window.loadFile(path.join(__dirname,'../../dist/index.html'));
 }
 function menu(){const action=name=>()=>send('shortcut',name);Menu.setApplicationMenu(Menu.buildFromTemplate([
- {label:'Orbit',submenu:[{role:'about'},{type:'separator'},{role:'hide'},{role:'hideOthers'},{role:'unhide'},{type:'separator'},{label:'Quit Orbit',accelerator:'Cmd+Q',click:()=>app.quit()}]},
+ {label:'Luce',submenu:[{role:'about'},{type:'separator'},{role:'hide'},{role:'hideOthers'},{role:'unhide'},{type:'separator'},{label:'Quit Luce',accelerator:'Cmd+Q',click:()=>app.quit()}]},
  {label:'File',submenu:[{label:'Add project…',accelerator:'Cmd+O',click:action('add-project')},{label:'New conversation',accelerator:'Cmd+N',click:action('new-conversation')},{label:'New shell',accelerator:'Cmd+T',click:action('new-shell')}]},
  {label:'Edit',submenu:[{role:'undo'},{role:'redo'},{type:'separator'},{role:'cut'},{role:'copy'},{role:'paste'},{role:'selectAll'}]},
  {label:'View',submenu:[{label:'Toggle website preview',accelerator:'Cmd+Shift+P',click:action('toggle-preview')},{label:'Focus conversation search',accelerator:'Cmd+K',click:action('search')},{type:'separator'},...[1,2,4].map((n,i)=>({label:`${n} terminal${n===1?'':'s'}`,accelerator:`Cmd+${i+1}`,click:action(`layout-${n}`)})),{label:'Focus current terminal',accelerator:'Cmd+Shift+Enter',click:action('focus-terminal')},{type:'separator'},{role:'togglefullscreen'},...(!app.isPackaged?[{role:'toggleDevTools'}]:[])]},
@@ -55,9 +57,9 @@ function menu(){const action=name=>()=>send('shortcut',name);Menu.setApplication
 app.on('before-quit',event=>{
  if(quitting)return;event.preventDefault();if(quitPending)return;quitPending=true;
  (async()=>{const running=terminals?.list().filter(s=>s.status!=='exited').length||0;
-  if(running&&!process.env.ORBIT_TEST){const {response}=await dialog.showMessageBox(window,{type:'question',message:'Quit Orbit?',detail:`This stops ${running} running terminal(s). Saved agent conversations remain available to resume.`,buttons:['Keep working','Quit Orbit'],defaultId:0,cancelId:0});if(response!==1){quitPending=false;return;}}
+  if(running&&!(process.env.LUCE_TEST||process.env.ORBIT_TEST)){const {response}=await dialog.showMessageBox(window,{type:'question',message:'Quit Luce?',detail:`This stops ${running} running terminal(s). Saved agent conversations remain available to resume.`,buttons:['Keep working','Quit Luce'],defaultId:0,cancelId:0});if(response!==1){quitPending=false;return;}}
   await terminals?.dispose();quitting=true;app.quit();
  })().catch(error=>{quitPending=false;dialog.showErrorBox('A terminal could not be stopped',error.message);});
 });
 app.on('activate',()=>{if(window){window.show();window.focus();}else if(store)createWindow();});
-app.whenReady().then(async()=>{store=new Store(path.join(app.getPath('userData'),'workspace.json'));environment=await resolveEnvironment();terminals=new TerminalManager(environment);terminals.on('data',event=>send('terminal-data',event));terminals.on('changed',changed);registerIPC();createWindow();menu();refresh();setInterval(refresh,20000).unref();scanServers().catch(()=>{});setInterval(()=>scanServers().catch(()=>{}),4000).unref();}).catch(error=>{dialog.showErrorBox('Orbit could not start',error.stack||error.message);quitting=true;app.quit();});
+app.whenReady().then(async()=>{store=new Store(path.join(app.getPath('userData'),'workspace.json'));environment=await resolveEnvironment();terminals=new TerminalManager(environment);terminals.on('data',event=>send('terminal-data',event));terminals.on('changed',changed);registerIPC();createWindow();menu();refresh();setInterval(refresh,20000).unref();scanServers().catch(()=>{});setInterval(()=>scanServers().catch(()=>{}),4000).unref();}).catch(error=>{dialog.showErrorBox('Luce could not start',error.stack||error.message);quitting=true;app.quit();});

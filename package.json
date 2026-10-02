@@ -1,6 +1,6 @@
 {
-  "name": "orbit-ide",
-  "productName": "Orbit",
+  "name": "luce-ide",
+  "productName": "Luce",
   "version": "0.1.0",
   "description": "A terminal-first workspace for your projects and coding conversations",
   "private": true,

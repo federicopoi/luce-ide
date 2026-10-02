@@ -9,7 +9,7 @@ async function resolveEnvironment(){
  const extra=[path.join(home,'.local/bin'),'/opt/homebrew/bin','/usr/local/bin','/usr/bin','/bin'];
  try{for(const version of fs.readdirSync(path.join(home,'.nvm/versions/node')).sort().reverse())extra.push(path.join(home,'.nvm/versions/node',version,'bin'));}catch{}
  env.PATH=[...new Set([...(env.PATH||'').split(':'),...extra])].filter(Boolean).join(':');delete env.ELECTRON_RUN_AS_NODE;
- env.TERM='xterm-256color';env.COLORTERM='truecolor';env.TERM_PROGRAM='Orbit';env.TERM_PROGRAM_VERSION='0.1.0';
+ env.TERM='xterm-256color';env.COLORTERM='truecolor';env.TERM_PROGRAM='Luce';env.TERM_PROGRAM_VERSION='0.1.0';
  const executables={};for(const command of ['codex','claude'])for(const directory of env.PATH.split(':')){const file=path.join(directory,command);try{fs.accessSync(file,fs.constants.X_OK);executables[command]=file;break;}catch{}}
  return {env,shell,executables};
 }

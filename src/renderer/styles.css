@@ -1,4 +1,4 @@
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#eeefef;background:#181a1b;font-size:13px;color-scheme:dark;--mint:#3794ff;--muted:#8c9094;--border:#36383b;--panel:#242628}
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#eeefef;background:#181a1b;font-size:13px;color-scheme:dark;--mint:#efc444;--muted:#8c9094;--border:#36383b;--panel:#242628}
 *{box-sizing:border-box}
 body{margin:0;overflow:hidden}
 button,input{font:inherit}
@@ -173,7 +173,7 @@ dialog::backdrop{background:#070b0bb0;backdrop-filter:none}
 
 .view-switch button { height:29px; width:70px; border-radius:0; font-size:11px; }
 
-.view-switch .selected { background:#2a2e31; border-bottom:2px solid #3794ff; color:#d7dadd; }
+.view-switch .selected { background:#2a2e31; border-bottom:2px solid #efc444; color:#d7dadd; }
 
 .search-shortcut { height:26px; background:#1b1e20; border-color:#303538; width:180px; }
 
@@ -193,7 +193,7 @@ dialog::backdrop{background:#070b0bb0;backdrop-filter:none}
 
 .project-name { font-size:12px; }
 
-.add-project { margin:12px 0 0; padding:6px 12px; font-size:11px; color:#3794ff; }
+.add-project { margin:12px 0 0; padding:6px 12px; font-size:11px; color:#efc444; }
 
 .add-project>span:first-child { border:0; width:15px; line-height:18px; font-size:18px; }
 
@@ -205,7 +205,7 @@ dialog::backdrop{background:#070b0bb0;backdrop-filter:none}
 
 .project-path { font-size:10px; color:#707780; }
 
-.new-conversation { height:29px; margin-bottom:9px; background:transparent; border:0; justify-content:flex-start; color:#3794ff; font-size:11px; padding:0 4px; }
+.new-conversation { height:29px; margin-bottom:9px; background:transparent; border:0; justify-content:flex-start; color:#efc444; font-size:11px; padding:0 4px; }
 
 .new-conversation:hover { background:#2a2e32; }
 
@@ -241,7 +241,7 @@ dialog::backdrop{background:#070b0bb0;backdrop-filter:none}
 
 .pane-header { height:29px; padding:0 10px; background:#25292c; border-bottom:1px solid #303437; font-size:11px; }
 
-.terminal-pane.active .pane-header { background:#292e32; box-shadow:inset 0 1px #3794ff; }
+.terminal-pane.active .pane-header { background:#292e32; box-shadow:inset 0 1px #efc444; }
 
 .pane-header .provider-tag { border:0; color:#8c949b; }
 
@@ -269,11 +269,11 @@ dialog::backdrop{background:#070b0bb0;backdrop-filter:none}
 
 .welcome>p { font-size:12px; color:#7f8992; line-height:1.7; }
 
-.primary { background:#286cb0!important; border-color:#347fc7!important; color:#f0f5fa!important; font-size:11px; font-weight:400; padding:7px 13px; }
+.primary { background:#efc444!important; border-color:#f7d464!important; color:#242424!important; font-size:11px; font-weight:400; padding:7px 13px; }
 
-.primary:hover { background:#327ec7!important; }
+.primary:hover { background:#f7d464!important; }
 
-.welcome-secondary { color:#3794ff; font-size:11px; }
+.welcome-secondary { color:#efc444; font-size:11px; }
 
 .welcome-shortcuts, .welcome-shortcuts kbd { color:#6c7781; }
 
@@ -371,9 +371,9 @@ dialog { background:#25292c; border-color:#444b50; padding:18px; }
 .conversation-lists::-webkit-scrollbar-thumb:hover, #projects::-webkit-scrollbar-thumb:hover, .discover-list::-webkit-scrollbar-thumb:hover { background:#737e88; }
 .conversation-lists::-webkit-scrollbar-button, #projects::-webkit-scrollbar-button, .discover-list::-webkit-scrollbar-button { display:none; width:0; height:0; }
 .sidebar-resizer { width:5px; flex:0 0 5px; cursor:col-resize; background:#202426; border-left:1px solid #303538; position:relative; touch-action:none; outline:none; }
-.sidebar-resizer:hover, .sidebar-resizer:focus-visible { background:#3794ff; border-color:#3794ff; }
+.sidebar-resizer:hover, .sidebar-resizer:focus-visible { background:#efc444; border-color:#efc444; }
 .resizing-sidebar { cursor:col-resize; user-select:none; }
-.resizing-sidebar .sidebar-resizer { background:#3794ff; }
+.resizing-sidebar .sidebar-resizer { background:#efc444; }
 .expanded-preview .sidebar-resizer { display:none; }
 .project-rail, .conversation-sidebar { border-right:0; }
 .terminal-body .xterm-dim { color:#b8bec6!important; }
@@ -386,3 +386,9 @@ dialog { background:#25292c; border-color:#444b50; padding:18px; }
 .sidebar-restore { font-size:12px; border:1px solid #39424a; height:26px; width:auto; padding:0 8px; white-space:nowrap; }
 .projects-collapsed #project-sidebar, .projects-collapsed #project-resizer,
 .conversations-collapsed #conversation-sidebar, .conversations-collapsed #conversation-resizer { display:none!important; }
+
+/* Luce’s light-beam identity. */
+.brand {gap:8px;}
+.brand svg {color:#e4e7eb;width:22px;height:22px;}
+#brand-icon {width:24px;height:24px;}
+.brand>span:nth-child(2) {font-size:16px;letter-spacing:-.4px;font-weight:600;}

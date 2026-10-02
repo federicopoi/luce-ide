@@ -13,7 +13,7 @@ function detectLocalURL(text){
 }
 function launchSpec(provider,sessionId,executables,{newSession=false}={}){
  if(!['codex','claude'].includes(provider))throw Error('Unknown conversation provider.');
- const file=executables[provider];if(!file)throw Error(`${provider==='codex'?'Codex':'Claude Code'} is not installed or could not be found. Install it, then reopen Orbit.`);
+ const file=executables[provider];if(!file)throw Error(`${provider==='codex'?'Codex':'Claude Code'} is not installed or could not be found. Install it, then reopen Luce.`);
  if(sessionId!==null&&sessionId!==undefined&&!/^[a-zA-Z0-9_-]{8,128}$/.test(sessionId))throw Error('Invalid conversation session ID.');
  return {file,args:sessionId?(provider==='codex'?['resume',sessionId]:[newSession?'--session-id':'--resume',sessionId]):[]};
 }
