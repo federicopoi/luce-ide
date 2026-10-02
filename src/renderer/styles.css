@@ -311,3 +311,54 @@ dialog { background:#25292c; border-color:#444b50; padding:18px; }
  .conversation-sidebar {width:215px;}
  }
 
+
+/* Readable workspace and per-terminal previews. */
+:root { font-size:14px; }
+.titlebar { height:44px; }
+.app-layout { height:calc(100vh - 44px); }
+.brand { height:44px; display:flex; align-items:center; font-size:14px; }
+#brand-icon { display:flex; align-items:center; justify-content:center; width:20px; height:20px; }
+.brand svg { width:18px; height:18px; }
+.project-heading { font-size:13px; }
+.project-rail { width:180px; }
+.project-name { font-size:13px; }
+.project-item { min-height:35px; }
+.rail-label, .section-label { font-size:11px; letter-spacing:0; }
+.conversation-sidebar { width:320px; padding:15px 12px 10px; }
+.project-title-row h1 { font-size:14px; }
+.project-path { font-size:12px; margin-top:6px; }
+.project-summary { margin-bottom:14px; }
+.new-conversation { font-size:13px; height:32px; margin-bottom:12px; }
+.search-field { height:32px; }
+.search-field input { font-size:12px; }
+.search-field kbd, .search-shortcut span { font-size:11px; }
+.search-shortcut { font-size:12px; height:30px; width:210px; }
+.session-row { font-size:13px; padding:8px 6px; min-height:34px; }
+.section-label { margin-bottom:8px; color:#9ca3aa; }
+.section-label .count { font-size:11px; }
+.history-section { margin-top:24px; }
+.history-row { border:0; margin:0; width:100%; align-items:center; gap:9px; }
+.history-title { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.history-provider { font-size:11px; color:#8d959d; }
+.history-row time { font-size:11px; color:#7c858e; width:40px; text-align:right; flex-shrink:0; }
+.session-row .provider-tag svg { display:none; }
+.provider-tag { font-size:11px; }
+.empty-list { font-size:12px; }
+#find-sessions { font-size:12px; }
+#provider-status { font-size:11px; }
+.pane-header { height:35px; font-size:13px; }
+.pane-header .provider-tag { font-size:11px; }
+.pane-header .provider-tag svg { display:none; }
+.terminal-pane, .terminal-pane.active, .terminal-body, .pane-empty { background:#282a2c; }
+.pane-preview { width:29px; height:27px; display:flex; align-items:center; justify-content:center; padding:0; border:0; color:#9fb8cf; }
+.pane-preview:hover { background:#38434c; }
+.pane-preview svg { width:17px; height:17px; }
+.pane-empty p { font-size:13px; color:#a3abb2; }
+.empty-actions button { font-size:12px; padding:7px 10px; }
+.statusbar { height:27px; font-size:11px; }
+#status-url { font-size:11px; }
+.browser-toolbar { height:38px; }
+#back-to-terminal, #preview-url { font-size:12px; }
+.popup button { font-size:13px; }
+.dot { display:none; }
+@media(max-width:1150px) { .project-rail {width:155px;} .conversation-sidebar {width:280px;} }

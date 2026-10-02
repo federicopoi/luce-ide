@@ -7,6 +7,9 @@ const {TerminalManager}=require('./terminals.cjs');
 const {resolveEnvironment}=require('./environment.cjs');
 const {previewURL}=require('./validation.cjs');
 const {Preview}=require('./preview.cjs');
+const {findLocalServers,reachable}=require('./servers.cjs');
+let scanningServers=false;
+async function scanServers(){if(scanningServers||!store||!terminals)return;scanningServers=true;try{const projects=store.snapshot().projects;const servers=await findLocalServers(projects.map(p=>p.directory));await Promise.all(terminals.list().map(async s=>{const p=projects.find(p=>p.id===s.projectId);const own=s.previewURL&&await reachable(s.previewURL)?s.previewURL:null;terminals.updatePreviewAvailability(s.id,own||servers.get(p?.directory)||null);}));}finally{scanningServers=false;}}
 app.setName('Orbit');
 if(process.env.ORBIT_PROFILE){fs.mkdirSync(process.env.ORBIT_PROFILE,{recursive:true});app.setPath('userData',process.env.ORBIT_PROFILE);}
 let window,store,terminals,environment,preview,quitting=false,quitPending=false,history={sessions:[],projects:[]},historyLoading=false,discoveryPromise;
@@ -35,7 +38,7 @@ function registerIPC(){
  handle('hide-preview',()=>preview.hide());handle('preview-bounds',bounds=>preview.setBounds(bounds));handle('reload-preview',()=>preview.reload());
 }
 function createWindow(){
- window=new BrowserWindow({width:1480,height:940,minWidth:960,minHeight:640,backgroundColor:'#171819',title:'Orbit',titleBarStyle:'hidden',trafficLightPosition:{x:18,y:20},webPreferences:{preload:path.join(__dirname,'preload.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false}});
+ window=new BrowserWindow({width:1480,height:940,minWidth:960,minHeight:640,backgroundColor:'#171819',title:'Orbit',titleBarStyle:'hidden',trafficLightPosition:{x:16,y:15},webPreferences:{preload:path.join(__dirname,'preload.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false}});
  preview=new Preview(window,event=>send('preview-event',event));window.webContents.setWindowOpenHandler(()=>({action:'deny'}));window.webContents.on('will-navigate',e=>e.preventDefault());
  window.webContents.on('did-start-loading',()=>preview.hide());
  window.on('close',event=>{if(!quitting){event.preventDefault();preview.hide();window.hide();}});
@@ -57,4 +60,4 @@ app.on('before-quit',event=>{
  })().catch(error=>{quitPending=false;dialog.showErrorBox('A terminal could not be stopped',error.message);});
 });
 app.on('activate',()=>{if(window){window.show();window.focus();}else if(store)createWindow();});
-app.whenReady().then(async()=>{store=new Store(path.join(app.getPath('userData'),'workspace.json'));environment=await resolveEnvironment();terminals=new TerminalManager(environment);terminals.on('data',event=>send('terminal-data',event));terminals.on('changed',changed);registerIPC();createWindow();menu();refresh();setInterval(refresh,20000).unref();}).catch(error=>{dialog.showErrorBox('Orbit could not start',error.stack||error.message);quitting=true;app.quit();});
+app.whenReady().then(async()=>{store=new Store(path.join(app.getPath('userData'),'workspace.json'));environment=await resolveEnvironment();terminals=new TerminalManager(environment);terminals.on('data',event=>send('terminal-data',event));terminals.on('changed',changed);registerIPC();createWindow();menu();refresh();setInterval(refresh,20000).unref();scanServers().catch(()=>{});setInterval(()=>scanServers().catch(()=>{}),4000).unref();}).catch(error=>{dialog.showErrorBox('Orbit could not start',error.stack||error.message);quitting=true;app.quit();});

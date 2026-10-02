@@ -9,7 +9,7 @@ Open `~/Applications/Orbit.app`. Add a project folder, or choose **Find local se
 - **New conversation:** start Codex, Claude Code, or a project shell using your installed tools and existing logins.
 - **Previous:** click a saved conversation to resume it with its original provider. Right-click to rename it in Orbit.
 - **Layouts:** use the grid button for one, two, or four terminals. A pane's menu can focus, rename, preview, or close that terminal.
-- **Preview:** run your website's dev server, then use the pane's Preview button. You can also enter a URL in the preview toolbar. Expand hides the sidebars; Back to terminal restores the running terminals.
+- **Preview:** run your website’s dev server. A browser icon appears in each terminal header when its detected local URL responds, or when Orbit finds an HTTP server listening from that project folder. Click it to preview that terminal’s website. The icon disappears when the server stops. Use the terminal’s menu to enter a URL manually. Expand hides the sidebars; Back to terminal restores the running terminals.
 - **Project options:** rename a project or remove it from Orbit without deleting its files.
 
 New Codex conversations launch the normal CLI. They appear in saved history once Codex persists them after use; Orbit does not create empty sessions through app-server.
