@@ -14,4 +14,12 @@ Test harness correction: poll async IPC predicates from Node; browser waitForFun
 Task 3: complete — development and packaged Electron smoke pass; browser geometry verified after asynchronous layout settles. Native child webContents capture confirms rendered website content; parent captures omit native child surfaces.
 Task 4: package produced and ad-hoc signature passes deep strict validation. Fresh-context review and installation pending.
 Packaging decision: disable packager's binary ASAR digest injection for the personal ad-hoc build because its framework re-signing step failed. Full final app bundle is ad-hoc signed and verified. Not a notarized distribution build.
+Final review: fresh-context read-only reviewer found five Important issues, no Critical issues, one Minor optimization, no declined judgments.
+Final fixed: keyboard focus during refresh — Electron smoke focus assertion failed before fix; actual keyboard input after refresh passes after preserving live pane DOM.
+Final fixed: new-session identity — Claude live-ID reuse test failed before fix; Codex startup now obtains a persistent thread ID via official app-server without a model turn, then opens it in the CLI. Installed-provider Electron tests pass for IDs, reuse and saved labels.
+Final fixed: process cleanup — signal-resistant parent/child regression failed before fix; bounded descendant termination and confirmed exit now pass. Quit awaits cleanup.
+Final fixed: preview recovery — stopped-server/restart/Reload smoke timed out before fix; failed-load state and reattachment now recover.
+Final fixed: malformed history — mixed null records/content dropped both fixture sessions before fix; individual invalid values are skipped and both sessions appear.
+Final suite: 11/11 unit tests pass; extended Electron smoke passes including actual keyboard and installed providers, with no model inference requested.
+Final minor (deferred): reduce history-cache memory by retaining compact metadata instead of parsed transcript excerpts. Reads and entry count remain bounded; startup discovery completed in under a second on this machine.
 Dependency fix: node-pty's packaged spawn-helper arrived without executable mode. Postinstall restores 0755; packaging will run it too.

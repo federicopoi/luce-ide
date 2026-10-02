@@ -26,9 +26,9 @@ test('history matches recorded directories and prefers explicit names over promp
  const home=fixture(t),cwd=path.join(home,'project');fs.mkdirSync(cwd);
  const codex=path.join(home,'.codex','sessions','2026');const claude=path.join(home,'.claude','projects','encoded');fs.mkdirSync(codex,{recursive:true});fs.mkdirSync(claude,{recursive:true});
  const id='12345678-1234-1234-1234-123456789012';
- fs.writeFileSync(path.join(codex,'rollout.jsonl'),[JSON.stringify({type:'session_meta',payload:{id,cwd,timestamp:'2026-10-01T10:00:00Z'}}),'broken',JSON.stringify({type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:'Fix the pricing page'}]}})].join('\n'));
+ fs.writeFileSync(path.join(codex,'rollout.jsonl'),['null',JSON.stringify({type:'session_meta',payload:{id,cwd,timestamp:'2026-10-01T10:00:00Z'}}),'broken',JSON.stringify({type:'response_item',payload:{type:'message',role:'user',content:[null,{type:'input_text',text:'Fix the pricing page'}]}})].join('\n'));
  fs.writeFileSync(path.join(home,'.codex','session_index.jsonl'),JSON.stringify({id,thread_name:'Pricing page',updated_at:'2026-10-01T11:00:00Z'}));
- fs.writeFileSync(path.join(claude,'second.jsonl'),[JSON.stringify({type:'user',cwd,sessionId:'87654321-1234-1234-1234-123456789012',timestamp:'2026-10-01T09:00:00Z',message:{role:'user',content:'Repair mobile navigation'}}),JSON.stringify({type:'custom-title',customTitle:'Mobile navigation',sessionId:'87654321-1234-1234-1234-123456789012'})].join('\n'));
+ fs.writeFileSync(path.join(claude,'second.jsonl'),['null',JSON.stringify({type:'user',cwd,sessionId:'87654321-1234-1234-1234-123456789012',timestamp:'2026-10-01T09:00:00Z',message:{role:'user',content:[null,{type:'text',text:'Repair mobile navigation'}]}}),JSON.stringify({type:'custom-title',customTitle:'Mobile navigation',sessionId:'87654321-1234-1234-1234-123456789012'})].join('\n'));
  fs.writeFileSync(path.join(claude,'bad.jsonl'),'not json');
  const result=await discover({home});assert.equal(result.sessions.length,2);assert.equal(result.sessions[0].title,'Pricing page');assert.equal(result.sessions[1].title,'Mobile navigation');assert.equal(result.sessions[1].directory,fs.realpathSync(cwd));assert.equal(result.projects.length,1);
 });

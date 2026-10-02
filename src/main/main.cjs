@@ -7,9 +7,10 @@ const {TerminalManager}=require('./terminals.cjs');
 const {resolveEnvironment}=require('./environment.cjs');
 const {previewURL}=require('./validation.cjs');
 const {Preview}=require('./preview.cjs');
+const {createCodexThread}=require('./sessions.cjs');
 app.setName('Orbit');
 if(process.env.ORBIT_PROFILE){fs.mkdirSync(process.env.ORBIT_PROFILE,{recursive:true});app.setPath('userData',process.env.ORBIT_PROFILE);}
-let window,store,terminals,environment,preview,quitting=false,history={sessions:[],projects:[]},historyLoading=false,discoveryPromise;
+let window,store,terminals,environment,preview,quitting=false,quitPending=false,history={sessions:[],projects:[]},historyLoading=false,discoveryPromise;
 if(!app.requestSingleInstanceLock())app.quit();
 app.on('second-instance',()=>{window?.show();window?.focus();});
 function send(name,value){if(window&&!window.isDestroyed())window.webContents.send(`orbit:${name}`,value);}
@@ -25,12 +26,12 @@ function registerIPC(){
  handle('update-project',(id,patch)=>{project(id);if(!patch||typeof patch!=='object'||Array.isArray(patch))throw Error('Invalid project settings.');const allowed={};if(patch.name!==undefined)allowed.name=patch.name;if(patch.layout!==undefined)allowed.layout=patch.layout;if(patch.previewURL!==undefined)allowed.previewURL=patch.previewURL?previewURL(patch.previewURL):'';
   if(patch.conversationNames!==undefined){if(!patch.conversationNames||typeof patch.conversationNames!=='object'||Array.isArray(patch.conversationNames))throw Error('Invalid conversation names.');allowed.conversationNames={};for(const [key,value]of Object.entries(patch.conversationNames)){if(key.length>200||typeof value!=='string')throw Error('Invalid conversation name.');allowed.conversationNames[key]=value.trim().slice(0,100);}}
   const result=store.updateProject(id,allowed);changed();return result;});
- handle('remove-project',async id=>{const p=project(id);const active=terminals.list().filter(s=>s.projectId===id&&s.status==='running');const {response}=await dialog.showMessageBox(window,{type:'question',message:`Remove ${p.name} from Orbit?`,detail:active.length?`This stops ${active.length} running terminal(s). Project files and agent history are kept.`:'Project files and agent history are kept.',buttons:['Cancel','Remove project'],defaultId:0,cancelId:0});if(response!==1)return false;for(const s of terminals.list().filter(s=>s.projectId===id))terminals.forget(s.id);store.removeProject(id);preview.hide();changed();return true;});
+ handle('remove-project',async id=>{const p=project(id);const active=terminals.list().filter(s=>s.projectId===id&&s.status==='running');const {response}=await dialog.showMessageBox(window,{type:'question',message:`Remove ${p.name} from Orbit?`,detail:active.length?`This stops ${active.length} running terminal(s). Project files and agent history are kept.`:'Project files and agent history are kept.',buttons:['Cancel','Remove project'],defaultId:0,cancelId:0});if(response!==1)return false;await Promise.all(terminals.list().filter(s=>s.projectId===id).map(s=>terminals.forget(s.id)));store.removeProject(id);preview.hide();changed();return true;});
  handle('history',async()=>{await refresh();return snapshot();});
- handle('create-terminal',options=>{if(!options||typeof options!=='object')throw Error('Invalid terminal options.');const p=project(options.projectId);if(options.title!==undefined&&(typeof options.title!=='string'||options.title.length>200))throw Error('Invalid terminal title.');return terminals.create(p,options);});
+ handle('create-terminal',async options=>{if(!options||typeof options!=='object')throw Error('Invalid terminal options.');const p=project(options.projectId);if(options.title!==undefined&&(typeof options.title!=='string'||options.title.length>200))throw Error('Invalid terminal title.');if(options.provider==='codex'&&!options.conversationId){options={...options,conversationId:await createCodexThread(environment.executables.codex,p.directory,environment.env)};}return terminals.create(p,options);});
  handle('get-terminal',id=>terminals.get(id));handle('write-terminal',(id,data)=>terminals.write(id,data));handle('resize-terminal',(id,cols,rows)=>terminals.resize(id,cols,rows));
  handle('rename-terminal',(id,title)=>{const s=terminals.rename(id,title);if(s.conversationId){const p=project(s.projectId);store.updateProject(p.id,{conversationNames:{...p.conversationNames,[`${s.provider}:${s.conversationId}`]:s.title}});}changed();return s;});
- handle('close-terminal',async id=>{const s=terminals.get(id);if(s.status==='running'){const {response}=await dialog.showMessageBox(window,{type:'question',message:`Close ${s.title}?`,detail:'This stops the running terminal. Agent conversations can be resumed from history.',buttons:['Cancel','Close terminal'],defaultId:0,cancelId:0});if(response!==1)return false;}terminals.forget(id);refresh();return true;});
+ handle('close-terminal',async id=>{const s=terminals.get(id);if(s.status==='running'){const {response}=await dialog.showMessageBox(window,{type:'question',message:`Close ${s.title}?`,detail:'This stops the running terminal. Agent conversations can be resumed from history.',buttons:['Cancel','Close terminal'],defaultId:0,cancelId:0});if(response!==1)return false;}await terminals.forget(id);refresh();return true;});
  handle('show-preview',async options=>{if(!options||typeof options!=='object')throw Error('Invalid preview request.');const id=options.projectId||store.snapshot().selectedProjectId;project(id);const url=previewURL(options.url);if(options.sessionId){const s=terminals.get(options.sessionId);if(s.projectId!==id)throw Error('Preview belongs to another project.');terminals.setPreview(s.id,url);}store.updateProject(id,{previewURL:url});changed();return preview.show({...options,projectId:id,url});});
  handle('hide-preview',()=>preview.hide());handle('preview-bounds',bounds=>preview.setBounds(bounds));handle('reload-preview',()=>preview.reload());
 }
@@ -50,9 +51,11 @@ function menu(){const action=name=>()=>send('shortcut',name);Menu.setApplication
  {role:'windowMenu'}
  ]));}
 app.on('before-quit',event=>{
- if(quitting)return;const running=terminals?.list().filter(s=>s.status==='running').length||0;
- if(running&&!process.env.ORBIT_TEST){event.preventDefault();dialog.showMessageBox(window,{type:'question',message:'Quit Orbit?',detail:`This stops ${running} running terminal(s). Saved agent conversations remain available to resume.`,buttons:['Keep working','Quit Orbit'],defaultId:0,cancelId:0}).then(({response})=>{if(response===1){quitting=true;terminals.dispose();app.quit();}});return;}
- quitting=true;terminals?.dispose();
+ if(quitting)return;event.preventDefault();if(quitPending)return;quitPending=true;
+ (async()=>{const running=terminals?.list().filter(s=>s.status!=='exited').length||0;
+  if(running&&!process.env.ORBIT_TEST){const {response}=await dialog.showMessageBox(window,{type:'question',message:'Quit Orbit?',detail:`This stops ${running} running terminal(s). Saved agent conversations remain available to resume.`,buttons:['Keep working','Quit Orbit'],defaultId:0,cancelId:0});if(response!==1){quitPending=false;return;}}
+  await terminals?.dispose();quitting=true;app.quit();
+ })().catch(error=>{quitPending=false;dialog.showErrorBox('A terminal could not be stopped',error.message);});
 });
 app.on('activate',()=>{if(window){window.show();window.focus();}else if(store)createWindow();});
 app.whenReady().then(async()=>{store=new Store(path.join(app.getPath('userData'),'workspace.json'));environment=await resolveEnvironment();terminals=new TerminalManager(environment);terminals.on('data',event=>send('terminal-data',event));terminals.on('changed',changed);registerIPC();createWindow();menu();refresh();setInterval(refresh,20000).unref();}).catch(error=>{dialog.showErrorBox('Orbit could not start',error.stack||error.message);quitting=true;app.quit();});

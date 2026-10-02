@@ -11,10 +11,10 @@ function detectLocalURL(text){
  const match=clean.match(/https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|\[::\])(?::\d+)?(?:\/[^\s\x1b<>"'\\]*)?/i);
  if(!match)return null;try{return previewURL(match[0].replace(/[),.;]+$/,''));}catch{return null;}
 }
-function launchSpec(provider,sessionId,executables){
+function launchSpec(provider,sessionId,executables,{newSession=false}={}){
  if(!['codex','claude'].includes(provider))throw Error('Unknown conversation provider.');
  const file=executables[provider];if(!file)throw Error(`${provider==='codex'?'Codex':'Claude Code'} is not installed or could not be found. Install it, then reopen Orbit.`);
  if(sessionId!==null&&sessionId!==undefined&&!/^[a-zA-Z0-9_-]{8,128}$/.test(sessionId))throw Error('Invalid conversation session ID.');
- return {file,args:sessionId?(provider==='codex'?['resume',sessionId]:['--resume',sessionId]):[]};
+ return {file,args:sessionId?(provider==='codex'?['resume',sessionId]:[newSession?'--session-id':'--resume',sessionId]):[]};
 }
 module.exports={previewURL,detectLocalURL,launchSpec};

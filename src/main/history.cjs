@@ -12,11 +12,11 @@ async function records(file){
   const size=Math.min(stat.size,256*1024),head=Buffer.alloc(size);await handle.read(head,0,size,0);text=head.toString('utf8');
   if(stat.size>size){text=text.slice(0,text.lastIndexOf('\n'));const length=Math.min(64*1024,stat.size-size),tail=Buffer.alloc(length);await handle.read(tail,0,length,stat.size-length);const end=tail.toString('utf8');text+='\n'+end.slice(end.indexOf('\n')+1);}
  }finally{await handle.close();}
- const parsed=[];for(const line of text.split('\n'))try{parsed.push(JSON.parse(line));}catch{}
+ const parsed=[];for(const line of text.split('\n'))try{const value=JSON.parse(line);if(value&&typeof value==='object'&&!Array.isArray(value))parsed.push(value);}catch{}
  cache.set(file,{mtime:stat.mtimeMs,records:parsed});if(cache.size>1500)cache.delete(cache.keys().next().value);return parsed;
 }
-function promptText(content){if(typeof content==='string')return content;if(Array.isArray(content))return content.filter(c=>c.type==='text'||c.type==='input_text').map(c=>c.text||'').join(' ');return '';}
-function title(text,fallback){return (text||fallback).replace(/\s+/g,' ').trim().slice(0,100)||fallback;}
+function promptText(content){if(typeof content==='string')return content;if(Array.isArray(content))return content.filter(c=>c&&typeof c==='object'&&(c.type==='text'||c.type==='input_text')&&typeof c.text==='string').map(c=>c.text).join(' ');return '';}
+function title(text,fallback){return (typeof text==='string'?text:fallback).replace(/\s+/g,' ').trim().slice(0,100)||fallback;}
 function humanPrompt(text){return text&&!/^\s*(<environment_context>|<system|<developer|# (AGENTS|Instructions)|This session is being continued)/i.test(text);}
 async function databaseSessions(root){
  let files;try{files=(await fs.readdir(root)).filter(n=>/^state_\d+\.sqlite$/.test(n)).sort((a,b)=>Number(b.match(/\d+/)[0])-Number(a.match(/\d+/)[0]));}catch{return [];}

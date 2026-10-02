@@ -21,6 +21,10 @@ try{
  await page.locator('[data-session-id="'+session.id+'"] .xterm').waitFor();
  await page.evaluate(({id})=>window.orbit.writeTerminal(id,"printf 'ORBIT_SMOKE_%s\\n' OK\r"),session);
  await until(()=>page.evaluate(async id=>(await window.orbit.getTerminal(id)).buffer.includes('ORBIT_SMOKE_OK'),session.id));
+ const textarea=page.locator('[data-session-id="'+session.id+'"] .xterm-helper-textarea');await textarea.focus();
+ await page.evaluate(()=>window.orbit.refreshHistory());assert.ok(await textarea.evaluate(el=>el===document.activeElement),'Terminal focus must survive history refresh');
+ await page.keyboard.type("printf 'ORBIT_TYPED_%s\\n' OK");await page.keyboard.press('Enter');
+ await until(()=>page.evaluate(async id=>(await window.orbit.getTerminal(id)).buffer.includes('ORBIT_TYPED_OK'),session.id));
  await page.locator('[data-project-id="'+p2.id+'"]').click();await page.locator('[data-project-id="'+p1.id+'"]').click();
  const after=await page.evaluate(id=>window.orbit.getTerminal(id),session.id);assert.equal(after.status,'running');assert.ok(after.buffer.includes('ORBIT_SMOKE_OK'));
  assert.equal((await page.evaluate(()=>window.orbit.getState())).terminals.length,1);
@@ -45,11 +49,30 @@ try{
  await page.locator('[data-session-id="'+session.id+'"] .xterm').waitFor();
  assert.equal((await page.evaluate(id=>window.orbit.getTerminal(id),session.id)).status,'running');
  const rejected=await page.evaluate(async()=>{try{await window.orbit.showPreview({url:'file:///etc/passwd',bounds:{x:0,y:0,width:100,height:100}});return false;}catch{return true;}});assert.ok(rejected);
+ const recovering=http.createServer((req,res)=>{res.setHeader('Content-Type','text/html');res.end('<h1>Recovered preview</h1>');});
+ await new Promise(resolve=>recovering.listen(0,'127.0.0.1',resolve));const recoveryPort=recovering.address().port;await new Promise(resolve=>recovering.close(resolve));
+ await page.getByRole('button',{name:'Open preview',exact:true}).click();await page.locator('#preview-url').fill(`http://127.0.0.1:${recoveryPort}`);await page.locator('#preview-url').press('Enter');
+ await page.locator('#preview-message').waitFor({state:'visible'});
+ await new Promise(resolve=>recovering.listen(recoveryPort,'127.0.0.1',resolve));
+ try{await page.getByRole('button',{name:'Reload preview'}).click();await until(()=>app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].contentView.children.some(v=>v.webContents?.getURL().startsWith('http://127.0.0.1:')&&v.getVisible())));}
+ finally{await new Promise(resolve=>recovering.close(resolve));}
+ await page.getByRole('button',{name:'Back to terminal',exact:true}).click();
  await page.screenshot({path:'artifacts/terminal-workspace.png'});
  await page.reload();await page.locator('[data-session-id="'+session.id+'"] .xterm').waitFor();
  assert.equal((await page.evaluate(()=>window.orbit.getState())).projects.length,2);assert.equal((await page.evaluate(()=>window.orbit.getState())).terminals.length,1);
  await page.getByRole('button',{name:'Change terminal layout'}).click();await page.getByRole('button',{name:'1 terminal',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#terminal-workspace').classList.contains('layout-1'));
  assert.equal((await page.evaluate(()=>window.orbit.getState())).projects.find(p=>p.id===p1.id).layout,1);
+ if(process.env.ORBIT_PROVIDER_SMOKE){
+  for(const provider of ['codex','claude']){
+   const created=await page.evaluate(({projectId,provider})=>window.orbit.createTerminal({projectId,provider}),{projectId:p1.id,provider});assert.match(created.conversationId,/^[a-zA-Z0-9_-]{8,128}$/);
+   await until(()=>page.evaluate(async id=>(await window.orbit.getTerminal(id)).buffer.length>100,created.id));
+   assert.equal((await page.evaluate(id=>window.orbit.getTerminal(id),created.id)).status,'running');
+   const resumed=await page.evaluate(({projectId,provider,conversationId})=>window.orbit.createTerminal({projectId,provider,conversationId}),{projectId:p1.id,provider,conversationId:created.conversationId});assert.equal(resumed.id,created.id);
+   await page.evaluate(({id,title})=>window.orbit.renameTerminal(id,title),{id:created.id,title:`Test ${provider}`});
+   const prefs=(await page.evaluate(()=>window.orbit.getState())).projects.find(p=>p.id===p1.id);assert.equal(prefs.conversationNames[`${provider}:${created.conversationId}`],`Test ${provider}`);
+  }
+  console.log('PASS: installed Codex and Claude startup, persistent IDs, live resume reuse, saved labels');
+ }
  assert.deepEqual(errors,[]);console.log('PASS: projects, real PTY, switching/reload, embedded local preview, fullscreen/return, isolation and unsafe URL rejection');
 }finally{
  if(app)await app.close();await new Promise(resolve=>server.close(resolve));await rm(root,{recursive:true,force:true});

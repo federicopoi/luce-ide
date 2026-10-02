@@ -57,3 +57,5 @@ ORBIT_EXECUTABLE="$HOME/Applications/Orbit.app/Contents/MacOS/Orbit" npm run smo
 ```
 
 Provider history formats can change; if a conversation is missing, refresh discovery and use the provider's own resume picker from a shell as a fallback (`codex resume` or `claude --resume`).
+
+Deferred optimization: discovery currently caches bounded transcript excerpts; large history collections can consume extra memory. Compact metadata caching is a follow-up.
