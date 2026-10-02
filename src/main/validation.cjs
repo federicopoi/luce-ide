@@ -8,7 +8,7 @@ function previewURL(input){
 }
 function detectLocalURL(text){
  const clean=text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g,'');
- const match=clean.match(/https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|\[::\])(?::\d+)?(?:\/[^\s\x1b<>"']*)?/i);
+ const match=clean.match(/https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|\[::\])(?::\d+)?(?:\/[^\s\x1b<>"'\\]*)?/i);
  if(!match)return null;try{return previewURL(match[0].replace(/[),.;]+$/,''));}catch{return null;}
 }
 function launchSpec(provider,sessionId,executables){

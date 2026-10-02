@@ -38,6 +38,7 @@ test('preview schemes are restricted and local URLs survive terminal color seque
  for(const input of ['file:///etc/passwd','javascript:alert(1)','data:text/html,test','http://user:pass@localhost:3000'])assert.throws(()=>previewURL(input),/URL|HTTP|credential/i);
  assert.equal(detectLocalURL('\x1b[32mLocal: http://localhost:5173/\x1b[0m'),'http://localhost:5173/');
  assert.equal(detectLocalURL('http://0.0.0.0:3000'),'http://localhost:3000/');assert.equal(detectLocalURL('https://example.com'),null);
+ assert.equal(detectLocalURL("printf 'http://localhost:5173/\\n'"),'http://localhost:5173/');
 });
 test('resume argument arrays reject hostile IDs and preserve executable paths with spaces',()=>{
  assert.deepEqual(launchSpec('codex','12345678-1234-1234-1234-123456789012',{codex:'/Applications/CLI Tools/codex'}),{file:'/Applications/CLI Tools/codex',args:['resume','12345678-1234-1234-1234-123456789012']});
