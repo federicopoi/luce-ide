@@ -6,6 +6,7 @@ A local Mac workspace for project terminals, Claude Code and Codex conversations
 
 Open `~/Applications/Luce.app`. Add a project folder, or choose **Find local sessions** to add a folder from your existing agent histories. Select a project in the left rail. Its live terminals and saved conversations appear beside it.
 
+- **Recent conversations:** the Projects rail also shows saved conversations from all local Codex and Claude folders, newest first and grouped by date. Search by title, folder, or provider. Click to open; right-click to add its folder to Projects without starting an agent. Each rail section can fold independently. Discovery refreshes every 20 seconds, with a manual refresh button.
 - **New conversation:** start Codex, Claude Code, or a project shell using your installed tools and existing logins.
 - **Previous:** click a saved conversation to resume it with its original provider. Right-click to rename it in Luce.
 - **Layouts:** use the grid button for one, two, or four terminals. A pane's menu can focus, rename, preview, or close that terminal.

@@ -12,7 +12,8 @@
     "start": "npm run build && electron .",
     "smoke": "node scripts/smoke.mjs",
     "package": "node scripts/package.mjs",
-    "install:app": "node scripts/install.mjs"
+    "install:app": "node scripts/install.mjs",
+    "smoke:recents": "node scripts/recent-smoke.mjs"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",

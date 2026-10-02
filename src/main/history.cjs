@@ -17,6 +17,7 @@ async function records(file){
 }
 function promptText(content){if(typeof content==='string')return content;if(Array.isArray(content))return content.filter(c=>c&&typeof c==='object'&&(c.type==='text'||c.type==='input_text')&&typeof c.text==='string').map(c=>c.text).join(' ');return '';}
 function title(text,fallback){return (typeof text==='string'?text:fallback).replace(/\s+/g,' ').trim().slice(0,100)||fallback;}
+function latestDate(...values){const times=values.map(value=>Date.parse(value)).filter(Number.isFinite);return times.length?new Date(Math.max(...times)).toISOString():'';}
 function humanPrompt(text){return text&&!/^\s*(<environment_context>|<system|<developer|# (AGENTS|Instructions)|This session is being continued)/i.test(text);}
 async function databaseSessions(root){
  let files;try{files=(await fs.readdir(root)).filter(n=>/^state_\d+\.sqlite$/.test(n)).sort((a,b)=>Number(b.match(/\d+/)[0])-Number(a.match(/\d+/)[0]));}catch{return [];}
@@ -40,15 +41,15 @@ async function discover({home=os.homedir()}={}){
   if(provider==='codex'){
    const meta=rows.find(r=>r.type==='session_meta')?.payload;if(!meta||String(JSON.stringify(meta.source)).includes('subagent'))return;
    id=meta.id||meta.session_id;directory=meta.cwd;updatedAt=meta.timestamp;
-   for(const row of rows){if(row.timestamp)updatedAt=row.timestamp;if(!first&&row.type==='response_item'&&row.payload?.role==='user'){const text=promptText(row.payload.content);if(humanPrompt(text))first=text;}}
-   custom=names.get(id)?.thread_name||'';updatedAt=names.get(id)?.updated_at||updatedAt;
+   for(const row of rows){if(row.timestamp)updatedAt=latestDate(updatedAt,row.timestamp);if(!first&&row.type==='response_item'&&row.payload?.role==='user'){const text=promptText(row.payload.content);if(humanPrompt(text))first=text;}}
+   custom=names.get(id)?.thread_name||'';updatedAt=latestDate(updatedAt,names.get(id)?.updated_at);
   }else{
    const meta=rows.find(r=>r.cwd&&r.sessionId&&!r.isSidechain);if(!meta)return;id=meta.sessionId;directory=meta.cwd;
-   for(const row of rows){if(row.timestamp)updatedAt=row.timestamp;if(row.type==='custom-title')custom=row.customTitle||'';if(!first&&row.type==='user'&&!row.isSidechain&&!row.toolUseResult){const text=promptText(row.message?.content);if(humanPrompt(text))first=text;}}
+   for(const row of rows){if(row.timestamp)updatedAt=latestDate(updatedAt,row.timestamp);if(row.type==='custom-title')custom=row.customTitle||'';if(!first&&row.type==='user'&&!row.isSidechain&&!row.toolUseResult){const text=promptText(row.message?.content);if(humanPrompt(text))first=text;}}
   }
   if(!id||!directory||!path.isAbsolute(directory))return;
   try{directory=await fs.realpath(directory);}catch{directory=path.normalize(directory);}
-  const key=`${provider}:${id}`,existing=sessions.get(key);if(existing){if(custom)existing.title=title(custom,existing.title);return;}
+  const key=`${provider}:${id}`,existing=sessions.get(key);if(existing){if(custom)existing.title=title(custom,existing.title);existing.updatedAt=latestDate(existing.updatedAt,updatedAt);existing.directory=directory;return;}
   sessions.set(key,{id,provider,directory,title:title(custom||first,`${provider==='codex'?'Codex':'Claude'} conversation`),updatedAt:updatedAt||new Date((await fs.stat(file)).mtimeMs).toISOString()});
  }catch{}}));
  const sorted=[...sessions.values()].sort((a,b)=>Date.parse(b.updatedAt)-Date.parse(a.updatedAt));const projects=[...new Set(sorted.map(s=>s.directory))].map(directory=>({directory,name:path.basename(directory),count:sorted.filter(s=>s.directory===directory).length}));

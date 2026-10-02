@@ -20,7 +20,7 @@ app.on('second-instance',()=>{window?.show();window?.focus();});
 function send(name,value){if(window&&!window.isDestroyed())window.webContents.send(`luce:${name}`,value);}
 function snapshot(){return {...store.snapshot(),terminals:terminals.list(),history:history.sessions,discoveredProjects:history.projects,historyLoading,providers:{codex:!!environment.executables.codex,claude:!!environment.executables.claude}};}
 function changed(){send('state-changed',snapshot());}
-async function refresh(){if(discoveryPromise)return discoveryPromise;historyLoading=true;changed();discoveryPromise=discover().then(result=>{history=result;}).catch(error=>{send('preview-event',{status:'notice',message:error.message});}).finally(()=>{historyLoading=false;discoveryPromise=null;changed();});return discoveryPromise;}
+async function refresh(){if(discoveryPromise)return discoveryPromise;historyLoading=true;changed();discoveryPromise=discover({home:process.env.LUCE_TEST?process.env.LUCE_HISTORY_HOME:undefined}).then(result=>{history=result;}).catch(error=>{send('preview-event',{status:'notice',message:error.message});}).finally(()=>{historyLoading=false;discoveryPromise=null;changed();});return discoveryPromise;}
 function project(id){if(typeof id!=='string')throw Error('Invalid project.');const p=store.snapshot().projects.find(p=>p.id===id);if(!p)throw Error('Project not found.');return p;}
 function handle(name,fn){ipcMain.handle(`luce:${name}`,async(event,...args)=>{if(!window||event.sender!==window.webContents||event.senderFrame!==window.webContents.mainFrame)throw Error('This request did not come from Luce.');return fn(...args);});}
 function registerIPC(){

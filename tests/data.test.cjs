@@ -50,3 +50,12 @@ test('database-only Codex conversations are discovered without transcript files'
  execFileSync('/usr/bin/sqlite3',[path.join(root,'state_5.sqlite'),`CREATE TABLE threads(id TEXT,cwd TEXT,title TEXT,name TEXT,first_user_message TEXT,updated_at INTEGER,source TEXT,has_user_event INTEGER,archived INTEGER);INSERT INTO threads VALUES('database-session-123','${cwd}','Old title','Database conversation','First prompt',1790852400,'cli',1,0);`]);
  const result=await discover({home});assert.equal(result.sessions.length,1);assert.equal(result.sessions[0].title,'Database conversation');assert.equal(result.sessions[0].directory,cwd);
 });
+test('global history spans project folders and sorts by latest activity rather than stale index dates',async t=>{
+ const home=fixture(t),root=path.join(home,'.codex','sessions');fs.mkdirSync(root,{recursive:true});
+ const old=path.join(home,'old-project'),recent=path.join(home,'external-project');fs.mkdirSync(old);fs.mkdirSync(recent);
+ const write=(name,cwd,time,last)=>fs.writeFileSync(path.join(root,name+'.jsonl'),[JSON.stringify({type:'session_meta',payload:{id:name,cwd,timestamp:time}}),JSON.stringify({timestamp:last,type:'response_item',payload:{role:'user',content:'Find my recent conversation'}})].join('\n'));
+ write('older-session',old,'2026-10-01T01:00:00Z','2026-10-01T02:00:00Z');
+ write('recent-session',recent,'2026-09-01T01:00:00Z','2026-10-02T05:10:00Z');
+ fs.writeFileSync(path.join(home,'.codex','session_index.jsonl'),JSON.stringify({id:'recent-session',thread_name:'Newest conversation',updated_at:'2026-09-01T01:00:00Z'}));
+ const result=await discover({home});assert.equal(result.projects.length,2);assert.equal(result.sessions[0].id,'recent-session');assert.equal(result.sessions[0].updatedAt,'2026-10-02T05:10:00.000Z');
+});

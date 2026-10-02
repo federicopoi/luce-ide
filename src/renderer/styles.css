@@ -392,3 +392,28 @@ dialog { background:#25292c; border-color:#444b50; padding:18px; }
 .brand svg {color:#e4e7eb;width:22px;height:22px;}
 #brand-icon {width:24px;height:24px;}
 .brand>span:nth-child(2) {font-size:16px;letter-spacing:-.4px;font-weight:600;}
+
+/* Two independent rail sections, backed by the shared agent histories. */
+.titlebar-spacer {flex:1;min-width:0;}
+.rail-section {display:flex;flex-direction:column;min-height:0;}
+#projects-section {flex:0 1 auto;max-height:36%;}
+#projects {flex:0 1 auto;min-height:0;}
+#recent-section {flex:1;min-height:0;margin-top:14px;border-top:1px solid #303538;padding-top:10px;}
+#recent-section.section-folded {flex:0 0 auto;}
+#recent-content {display:flex;flex-direction:column;min-height:0;flex:1;padding:0 9px;}
+#recent-list {flex:1;min-height:0;overflow:auto;scrollbar-width:thin;scrollbar-color:#4a5158 transparent;margin-top:8px;}
+#recent-list::-webkit-scrollbar {width:5px;}
+#recent-list::-webkit-scrollbar-thumb {background:#464d54;border-radius:5px;}
+#recent-list::-webkit-scrollbar-button {display:none;}
+.section-toggle {font-size:10px;color:#a4adb5;text-align:left;padding:3px 0;white-space:nowrap;}
+.rail-label {padding:0 10px 6px 12px;gap:3px;}
+#refresh-recents {width:22px;height:24px;font-size:16px;color:#89949d;}
+.recent-search-field {padding:0 7px;}
+.recent-search-field input {font-size:11px;}
+.recent-date {font-size:11px;color:#8d979f;padding:9px 4px 5px;}
+.recent-row {display:flex;flex-direction:column;width:100%;text-align:left;padding:8px 5px;gap:5px;border-radius:2px;}
+.recent-title {display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:12px;line-height:1.45;color:#d0d5da;}
+.recent-meta {display:flex;flex-direction:column;gap:2px;font-size:10px;color:#89949d;width:100%;}
+.recent-meta>span:first-child {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.recent-more {font-size:11px;color:#efc444;padding:10px 5px;}
+.add-project {margin-top:auto;padding-top:12px;flex-shrink:0;}

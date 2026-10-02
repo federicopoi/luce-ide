@@ -34,7 +34,7 @@ function renderProjects(){
  $('projects').replaceChildren();for(const p of state.projects){const button=document.createElement('button');button.className=`project-item${p.id===state.selectedProjectId?' selected':''}`;button.dataset.projectId=p.id;button.title=`${p.name}\n${p.directory}`;button.innerHTML=`<span class="project-initial">${icon('folder')}</span><span class="project-name">${escape(p.name)}</span>`;button.onclick=()=>run(()=>selectProject(p.id));button.oncontextmenu=event=>{event.preventDefault();if(p.id===state.selectedProjectId)projectMenu(button);else run(async()=>{await selectProject(p.id);projectMenu(button);});};$('projects').append(button);}
 }
 function renderConversations(){
- const p=project();$('sidebar-title').textContent=p?.name||'Luce';$('project-heading').textContent=p?.name||'Your workspace';$('project-path').textContent=p?.directory?.replace(/^\/Users\/[^/]+/,'~')||'A place for your coding sessions';$('project-path').title=p?.directory||'';$('project-menu').disabled=!p;$('new-conversation').disabled=!p;
+ const p=project();$('sidebar-title').textContent=p?.name||'Luce';$('project-path').textContent=p?.directory?.replace(/^\/Users\/[^/]+/,'~')||'A place for your coding sessions';$('project-path').title=p?.directory||'';$('project-menu').disabled=!p;$('new-conversation').disabled=!p;
  $('provider-status').textContent=[state.providers.claude?'Claude Code':'Claude not found',state.providers.codex?'Codex':'Codex not found'].join(' + ');$('refresh-indicator').classList.toggle('loading',!!state.historyLoading);
  const container=$('conversation-lists');container.replaceChildren();if(!p){container.innerHTML='<div class="empty-list">Add a project folder to see its terminals and saved conversations.</div>';return;}
  const live=projectSessions().filter(s=>s.title.toLowerCase().includes(query)),header=document.createElement('div');header.className='section-label';header.innerHTML=`OPEN TERMINALS<span class="count">${live.filter(s=>s.status==='running').length}</span>`;container.append(header);
@@ -100,7 +100,7 @@ function focusSession(id){activeId=id;activeProjects.set(state.selectedProjectId
 function render(){
  for(const [id,view]of views)if(!state.terminals.some(s=>s.id===id)){view.terminal.dispose();views.delete(id);}
  document.body.classList.toggle('preview-mode',mode==='preview');document.body.classList.toggle('expanded-preview',expanded&&mode==='preview');$('preview-workspace').hidden=mode!=='preview';
- renderProjects();renderConversations();renderWorkspace();const p=project();$('status-path').textContent=p?.directory?.replace(/^\/Users\/[^/]+/,'~')||'Luce · Local workspace';$('terminal-count').textContent=p?`${projectSessions().filter(s=>s.status==='running').length} terminal${projectSessions().filter(s=>s.status==='running').length===1?'':'s'}`:'';
+ renderProjects();renderRecents();renderConversations();renderWorkspace();const p=project();$('status-path').textContent=p?.directory?.replace(/^\/Users\/[^/]+/,'~')||'Luce · Local workspace';$('terminal-count').textContent=p?`${projectSessions().filter(s=>s.status==='running').length} terminal${projectSessions().filter(s=>s.status==='running').length===1?'':'s'}`:'';
  const url=projectSessions().find(s=>s.previewURL)?.previewURL||p?.previewURL||'';try{$('status-url').innerHTML=url?`${escape(new URL(url).host)}`:'';}catch{$('status-url').textContent='';}
  $('expand-preview').innerHTML=icon(expanded?'restore':'expand');$('expand-preview').setAttribute('aria-label',expanded?'Restore preview':'Expand preview');
  if(mode==='preview'&&currentURL)requestAnimationFrame(updatePreviewBounds);
@@ -151,3 +151,31 @@ for(const [id,key] of [['project-resizer','projects'],['conversation-resizer','c
 }
 window.addEventListener('resize',()=>applySidebarWidths());
 applySidebarWidths();
+
+let recentQuery='',recentLimit=50,railSections={projects:true,recent:true};
+try{const saved=JSON.parse(localStorage.getItem('luce-rail-sections')||'{}');for(const key of Object.keys(railSections))if(typeof saved[key]==='boolean')railSections[key]=saved[key];}catch{}
+function applyRailSections(){
+ $('projects').hidden=!railSections.projects;$('recent-content').hidden=!railSections.recent;
+ $('recent-section').classList.toggle('section-folded',!railSections.recent);
+ for(const [key,id,label] of [['projects','toggle-project-list','PROJECTS'],['recent','toggle-recent','RECENT CONVERSATIONS']]){$(id).textContent=`${railSections[key]?'▾':'▸'} ${label}`;$(id).setAttribute('aria-expanded',railSections[key]);}
+}
+for(const [key,id] of [['projects','toggle-project-list'],['recent','toggle-recent']])$(id).onclick=()=>{railSections[key]=!railSections[key];try{localStorage.setItem('luce-rail-sections',JSON.stringify(railSections));}catch{}applyRailSections();};
+function recentTitle(h){const p=state.projects.find(p=>p.directory===h.directory);return p?.conversationNames?.[`${h.provider}:${h.id}`]||h.title;}
+function recentGroup(date){const day=new Date(date);day.setHours(0,0,0,0);const today=new Date();today.setHours(0,0,0,0);const yesterday=new Date(today);yesterday.setDate(yesterday.getDate()-1);return day.getTime()===today.getTime()?'Today':day.getTime()===yesterday.getTime()?'Yesterday':new Date(date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:day.getFullYear()!==today.getFullYear()?'numeric':undefined});}
+async function organizeRecent(h,open=false){const p=await api.addProject(h.directory);await api.selectProject(p.id);state=await api.getState();mode='terminal';expanded=false;focused=false;render();if(open)await createTerminal(h.provider,h);}
+function renderRecents(){
+ const list=$('recent-list');list.replaceChildren();
+ const items=state.history.filter(h=>`${recentTitle(h)} ${h.directory} ${providerName(h.provider)}`.toLowerCase().includes(recentQuery));let group='';
+ for(const h of items.slice(0,recentLimit)){
+  const next=recentGroup(h.updatedAt);if(next!==group){group=next;const label=document.createElement('div');label.className='recent-date';label.textContent=group;list.append(label);}
+  const row=document.createElement('button');row.className='recent-row';row.dataset.conversationId=h.id;row.title=`${recentTitle(h)}\n${h.directory}\n${providerName(h.provider)} · ${new Date(h.updatedAt).toLocaleString()}`;
+  const folder=h.directory.split('/').filter(Boolean).pop()||h.directory;
+  row.innerHTML=`<span class="recent-title">${escape(recentTitle(h))}</span><span class="recent-meta"><span>${escape(folder)}</span><span>${providerName(h.provider)} · ${escape(relativeTime(h.updatedAt))}</span></span>`;
+  row.onclick=()=>run(()=>organizeRecent(h,true));row.oncontextmenu=event=>{event.preventDefault();popup(row,[{label:'Open conversation',icon:h.provider,action:()=>organizeRecent(h,true)},{label:state.projects.some(p=>p.directory===h.directory)?'Show project':'Add folder to projects',icon:'folder',action:()=>organizeRecent(h)}]);};list.append(row);
+ }
+ if(!items.length){const empty=document.createElement('div');empty.className='empty-list';empty.textContent=state.historyLoading?'Looking for saved conversations…':recentQuery?'No matching conversations.':'Saved Codex and Claude conversations from all folders appear here.';list.append(empty);}
+ if(items.length>recentLimit){const more=document.createElement('button');more.className='recent-more';more.textContent='Show more';more.onclick=()=>{recentLimit+=50;renderRecents();};list.append(more);}
+}
+$('recent-search').oninput=event=>{recentQuery=event.target.value.toLowerCase();recentLimit=50;renderRecents();};
+$('refresh-recents').onclick=()=>run(async()=>{await api.refreshHistory();state=await api.getState();renderRecents();});
+applyRailSections();
