@@ -10,6 +10,7 @@ Open `~/Applications/Orbit.app`. Add a project folder, or choose **Find local se
 - **Previous:** click a saved conversation to resume it with its original provider. Right-click to rename it in Orbit.
 - **Layouts:** use the grid button for one, two, or four terminals. A pane's menu can focus, rename, preview, or close that terminal.
 - **Preview:** run your website’s dev server. A browser icon appears in each terminal header when its detected local URL responds, or when Orbit finds an HTTP server listening from that project folder. Click it to preview that terminal’s website. The icon disappears when the server stops. Use the terminal’s menu to enter a URL manually. Expand hides the sidebars; Back to terminal restores the running terminals.
+- **Sidebar widths:** drag either vertical divider to resize Projects or Conversations. Widths are remembered. Focus a divider and use Left/Right arrows for 10px steps; double-click or press Home to reset.
 - **Project options:** rename a project or remove it from Orbit without deleting its files.
 
 New Codex conversations launch the normal CLI. They appear in saved history once Codex persists them after use; Orbit does not create empty sessions through app-server.

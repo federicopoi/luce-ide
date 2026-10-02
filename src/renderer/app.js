@@ -66,7 +66,7 @@ async function discoverProjects(){
 $('modal-close').onclick=closeModal;$('modal-cancel').onclick=closeModal;
 function makeTerminal(s){
  const pane=document.createElement('section');pane.className='terminal-pane';pane.dataset.sessionId=s.id;pane.innerHTML='<div class="pane-header"></div><div class="terminal-body"></div>';
- const terminal=new Terminal({fontFamily:'"SFMono-Regular", Menlo, Monaco, monospace',fontSize:14,lineHeight:1.3,letterSpacing:0.15,cursorBlink:true,cursorStyle:'bar',scrollback:10000,allowProposedApi:false,theme:{background:'#282a2c',foreground:'#ececec',cursor:'#ececec',selectionBackground:'#35495e',black:'#202426',red:'#dca08b',green:'#a3d6a9',yellow:'#d9c89c',blue:'#8cbaca',magenta:'#b6a9d1',cyan:'#8ec6c1',white:'#dce4e3',brightBlack:'#7b888e',brightRed:'#e7ad98',brightGreen:'#b4e4bb',brightYellow:'#ead8ad',brightBlue:'#a0cede',brightMagenta:'#cfc0e8',brightCyan:'#a4d9d3',brightWhite:'#f2f6f4'}});
+ const terminal=new Terminal({fontFamily:'"SFMono-Regular", Menlo, Monaco, monospace',fontSize:14,lineHeight:1.3,letterSpacing:0.15,cursorBlink:true,cursorStyle:'block',minimumContrastRatio:8,scrollback:10000,allowProposedApi:false,theme:{background:'#282a2c',foreground:'#ececec',cursor:'#ececec',cursorAccent:'#282a2c',selectionBackground:'#35495e',black:'#202426',red:'#dca08b',green:'#a3d6a9',yellow:'#d9c89c',blue:'#8cbaca',magenta:'#b6a9d1',cyan:'#8ec6c1',white:'#dce4e3',brightBlack:'#a8b0bb',brightRed:'#e7ad98',brightGreen:'#b4e4bb',brightYellow:'#ead8ad',brightBlue:'#a0cede',brightMagenta:'#cfc0e8',brightCyan:'#a4d9d3',brightWhite:'#f2f6f4'}});
  const fit=new FitAddon();terminal.loadAddon(fit);terminal.open(pane.querySelector('.terminal-body'));
  const view={pane,terminal,fit,ready:false,pending:[],lastCols:0,lastRows:0};views.set(s.id,view);
  terminal.onData(data=>run(()=>api.writeTerminal(s.id,data)));terminal.onTitleChange(()=>{});
@@ -122,3 +122,27 @@ api.onShortcut(name=>run(async()=>{if(name==='add-project')await addProject();el
 new ResizeObserver(()=>{requestAnimationFrame(fitTerminals);updatePreviewBounds();}).observe($('terminal-workspace'));new ResizeObserver(updatePreviewBounds).observe($('browser-surface'));window.addEventListener('resize',()=>{fitTerminals();updatePreviewBounds();});
 for(const [id,name]of [['brand-icon','orbit'],['search-icon','search'],['history-icon','history'],['folder-icon','folder'],['globe-icon','globe'],['reload-preview','reload'],['expand-preview','expand'],['layout-button','layout']])$(id).innerHTML=icon(name);
 run(async()=>{state=await api.getState();render();});
+
+const sidebarDefaults={projects:180,conversations:320};
+let sidebarWidths={...sidebarDefaults};
+try{const saved=JSON.parse(localStorage.getItem('orbit-sidebar-widths')||'{}');for(const key of Object.keys(sidebarWidths))if(Number.isFinite(saved[key]))sidebarWidths[key]=saved[key];}catch{}
+function applySidebarWidths(save=false){
+ sidebarWidths.projects=Math.round(Math.max(120,Math.min(340,sidebarWidths.projects,innerWidth-530)));
+ sidebarWidths.conversations=Math.round(Math.max(210,Math.min(600,sidebarWidths.conversations,innerWidth-sidebarWidths.projects-310)));
+ for(const [key,panelId,handleId,min,max] of [['projects','project-sidebar','project-resizer',120,340],['conversations','conversation-sidebar','conversation-resizer',210,600]]){
+  $(panelId).style.width=`${sidebarWidths[key]}px`;const handle=$(handleId);handle.setAttribute('aria-valuemin',min);handle.setAttribute('aria-valuemax',max);handle.setAttribute('aria-valuenow',sidebarWidths[key]);
+ }
+ if(save)try{localStorage.setItem('orbit-sidebar-widths',JSON.stringify(sidebarWidths));}catch{}
+ requestAnimationFrame(()=>{fitTerminals();updatePreviewBounds();});
+}
+for(const [id,key] of [['project-resizer','projects'],['conversation-resizer','conversations']]){
+ const handle=$(id);let drag=null;
+ const end=event=>{if(!drag)return;drag=null;document.body.classList.remove('resizing-sidebar');if(handle.hasPointerCapture(event.pointerId))handle.releasePointerCapture(event.pointerId);applySidebarWidths(true);if(mode==='preview'&&currentURL)run(showBrowser);};
+ handle.onpointerdown=event=>{if(event.button!==0)return;event.preventDefault();drag={x:event.clientX,width:sidebarWidths[key]};handle.setPointerCapture(event.pointerId);document.body.classList.add('resizing-sidebar');if(mode==='preview')run(()=>api.hidePreview());};
+ handle.onpointermove=event=>{if(!drag)return;sidebarWidths[key]=drag.width+event.clientX-drag.x;applySidebarWidths();};
+ handle.onpointerup=end;handle.onpointercancel=end;
+ handle.ondblclick=()=>{sidebarWidths[key]=sidebarDefaults[key];applySidebarWidths(true);};
+ handle.onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home'].includes(event.key))return;event.preventDefault();sidebarWidths[key]=event.key==='Home'?sidebarDefaults[key]:sidebarWidths[key]+(event.key==='ArrowLeft'?-10:10);applySidebarWidths(true);};
+}
+window.addEventListener('resize',()=>applySidebarWidths());
+applySidebarWidths();

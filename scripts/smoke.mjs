@@ -17,6 +17,13 @@ try{
  await page.getByText('Open a project',{exact:true}).waitFor();
  const p1=await page.evaluate(dir=>window.orbit.addProject(dir),first);const p2=await page.evaluate(dir=>window.orbit.addProject(dir),second);
  await page.evaluate(id=>window.orbit.selectProject(id),p1.id);await page.locator('[data-project-id="'+p1.id+'"]').click();
+ const widths={};
+ for(const [name,selector,delta] of [['Resize projects sidebar','.project-rail',45],['Resize conversations sidebar','.conversation-sidebar',-45]]){
+  const panel=page.locator(selector),before=(await panel.boundingBox()).width;const handle=page.getByRole('separator',{name});assert.equal(await handle.count(),1,'Sidebar has a resize handle');const bounds=await handle.boundingBox();assert.ok(bounds,'Sidebar has a resize handle');
+  await page.mouse.move(bounds.x+bounds.width/2,bounds.y+80);await page.mouse.down();await page.mouse.move(bounds.x+bounds.width/2+delta,bounds.y+80,{steps:5});await page.mouse.up();
+  widths[selector]=(await panel.boundingBox()).width;assert.ok(Math.abs(widths[selector]-before-delta)<2,'Dragging changes the sidebar width');
+ }
+ const keyboardHandle=page.getByRole('separator',{name:'Resize projects sidebar'});await keyboardHandle.focus();await page.keyboard.press('ArrowRight');widths['.project-rail']+=10;assert.ok(Math.abs((await page.locator('.project-rail').boundingBox()).width-widths['.project-rail'])<2);
  const session=await page.evaluate(id=>window.orbit.createTerminal({projectId:id,provider:'shell'}),p1.id);
  await page.locator('[data-session-id="'+session.id+'"] .xterm').waitFor();
  await page.evaluate(({id})=>window.orbit.writeTerminal(id,"printf 'ORBIT_SMOKE_%s\\n' OK\r"),session);
@@ -61,7 +68,7 @@ try{
  finally{await new Promise(resolve=>recovering.close(resolve));}
  await page.getByRole('button',{name:'Back to terminal',exact:true}).click();
  await page.screenshot({path:'artifacts/terminal-workspace.png'});
- await page.reload();await page.locator('[data-session-id="'+session.id+'"] .xterm').waitFor();
+ await page.reload();for(const [selector,width] of Object.entries(widths))assert.ok(Math.abs((await page.locator(selector).boundingBox()).width-width)<2,'Sidebar width survives reload');await page.locator('[data-session-id="'+session.id+'"] .xterm').waitFor();
  assert.equal((await page.evaluate(()=>window.orbit.getState())).projects.length,2);assert.equal((await page.evaluate(()=>window.orbit.getState())).terminals.length,1);
  await page.getByRole('button',{name:'Change terminal layout'}).click();await page.getByRole('button',{name:'1 terminal',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#terminal-workspace').classList.contains('layout-1'));
  assert.equal((await page.evaluate(()=>window.orbit.getState())).projects.find(p=>p.id===p1.id).layout,1);

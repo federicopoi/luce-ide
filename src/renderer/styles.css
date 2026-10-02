@@ -362,3 +362,19 @@ dialog { background:#25292c; border-color:#444b50; padding:18px; }
 .popup button { font-size:13px; }
 .dot { display:none; }
 @media(max-width:1150px) { .project-rail {width:155px;} .conversation-sidebar {width:280px;} }
+
+/* Quiet scrollbars and draggable, persistent sidebar widths. */
+.conversation-lists, #projects, .discover-list { scrollbar-width:thin; scrollbar-color:#4a5158 transparent; }
+.conversation-lists::-webkit-scrollbar, #projects::-webkit-scrollbar, .discover-list::-webkit-scrollbar { width:5px; height:5px; }
+.conversation-lists::-webkit-scrollbar-track, #projects::-webkit-scrollbar-track, .discover-list::-webkit-scrollbar-track { background:transparent; }
+.conversation-lists::-webkit-scrollbar-thumb, #projects::-webkit-scrollbar-thumb, .discover-list::-webkit-scrollbar-thumb { background:#464d54; border-radius:5px; }
+.conversation-lists::-webkit-scrollbar-thumb:hover, #projects::-webkit-scrollbar-thumb:hover, .discover-list::-webkit-scrollbar-thumb:hover { background:#737e88; }
+.conversation-lists::-webkit-scrollbar-button, #projects::-webkit-scrollbar-button, .discover-list::-webkit-scrollbar-button { display:none; width:0; height:0; }
+.sidebar-resizer { width:5px; flex:0 0 5px; cursor:col-resize; background:#202426; border-left:1px solid #303538; position:relative; touch-action:none; outline:none; }
+.sidebar-resizer:hover, .sidebar-resizer:focus-visible { background:#3794ff; border-color:#3794ff; }
+.resizing-sidebar { cursor:col-resize; user-select:none; }
+.resizing-sidebar .sidebar-resizer { background:#3794ff; }
+.expanded-preview .sidebar-resizer { display:none; }
+.project-rail, .conversation-sidebar { border-right:0; }
+.terminal-body .xterm-dim { color:#b8bec6!important; }
+.terminal-body .xterm-cursor-layer { opacity:1; }
