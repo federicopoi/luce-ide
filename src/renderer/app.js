@@ -18,7 +18,7 @@ function relativeTime(date){const age=Math.max(0,(Date.now()-Date.parse(date))/1
 function titleFor(history){return project()?.conversationNames?.[`${history.provider}:${history.id}`]||history.title;}
 function setActive(id){activeId=id;if(project())activeProjects.set(project().id,id);document.querySelectorAll('.terminal-pane,.session-row').forEach(el=>el.classList.toggle('active',el.dataset.sessionId===id));}
 function popup(button,items){
- const box=$('popup');box.replaceChildren();for(const item of items){if(item.divider){const div=document.createElement('div');div.className='divider';box.append(div);continue;}const row=document.createElement('button');row.disabled=!!item.disabled;row.innerHTML=`${icon(item.icon||'shell')}<span>${escape(item.label)}</span>${item.hint?`<small>${escape(item.hint)}</small>`:''}`;row.onclick=()=>{box.hidden=true;run(item.action);};box.append(row);}
+ const box=$('popup');if(!button.getClientRects().length)button=$('layout-button');box.replaceChildren();for(const item of items){if(item.divider){const div=document.createElement('div');div.className='divider';box.append(div);continue;}const row=document.createElement('button');row.disabled=!!item.disabled;row.innerHTML=`${icon(item.icon||'shell')}<span>${escape(item.label)}</span>${item.hint?`<small>${escape(item.hint)}</small>`:''}`;row.onclick=()=>{box.hidden=true;run(item.action);};box.append(row);}
  const rect=button.getBoundingClientRect();box.style.left=`${Math.min(rect.left,innerWidth-230)}px`;box.style.top=`${Math.min(rect.bottom+5,innerHeight-items.length*42-10)}px`;box.hidden=false;
 }
 document.addEventListener('pointerdown',event=>{if(!$('popup').contains(event.target))$('popup').hidden=true;});
@@ -112,23 +112,28 @@ async function openPreview(session=null){if(!project())return;const s=session||s
 async function terminalMode(){await api.hidePreview();mode='terminal';expanded=false;render();views.get(activeId)?.terminal.focus();}
 async function setLayout(layout){if(!project())return;focused=false;await run(()=>api.updateProject(project().id,{layout}));}
 $('new-conversation').onclick=()=>newMenu();$('add-project').onclick=()=>run(()=>addProject());$('project-menu').onclick=()=>projectMenu();$('find-sessions').onclick=()=>run(discoverProjects);
-$('conversation-search').oninput=e=>{query=e.target.value.toLowerCase();historyLimit=60;renderConversations();};$('search-shortcut').onclick=()=>$('conversation-search').focus();$('layout-button').onclick=e=>popup(e.currentTarget,[1,2,4].map(layout=>({label:`${layout} terminal${layout===1?'':'s'}`,icon:'layout',hint:project()?.layout===layout?'Selected':'',action:()=>setLayout(layout)})));
+$('conversation-search').oninput=e=>{query=e.target.value.toLowerCase();historyLimit=60;renderConversations();};$('search-shortcut').onclick=()=>{setSidebarCollapsed('conversations',false);$('conversation-search').focus();};$('layout-button').onclick=e=>popup(e.currentTarget,[1,2,4].map(layout=>({label:`${layout} terminal${layout===1?'':'s'}`,icon:'layout',hint:project()?.layout===layout?'Selected':'',action:()=>setLayout(layout)})));
 $('back-to-terminal').onclick=()=>run(terminalMode);$('reload-preview').onclick=()=>run(()=>api.reloadPreview());$('expand-preview').onclick=()=>{expanded=!expanded;render();requestAnimationFrame(updatePreviewBounds);};
 $('url-form').onsubmit=event=>{event.preventDefault();currentURL=$('preview-url').value;run(showBrowser);};
 api.onData(event=>{const view=views.get(event.id);if(!view)return;if(view.ready)view.terminal.write(event.data);else view.pending.push(event);});
 api.onState(next=>{const previousId=state.selectedProjectId;state=next;if(previousId&&previousId!==next.selectedProjectId){mode='terminal';expanded=false;focused=false;activeId=activeProjects.get(next.selectedProjectId)||null;api.hidePreview();}render();});
 api.onPreview(event=>{if(event.projectId&&event.projectId!==state.selectedProjectId)return;if(event.status==='error'){api.hidePreview();$('preview-placeholder').hidden=false;$('preview-message').textContent=event.message;$('preview-message').hidden=false;}else if(event.status==='ready'&&event.url?.startsWith('http')){currentURL=event.url;$('preview-url').value=event.url;$('preview-placeholder').hidden=true;$('preview-message').hidden=true;}else if(event.status==='notice')toast(event.message,true);});
-api.onShortcut(name=>run(async()=>{if(name==='add-project')await addProject();else if(name==='new-conversation')newMenu();else if(name==='new-shell')await createTerminal('shell');else if(name==='toggle-preview')await(mode==='preview'?terminalMode():openPreview());else if(name==='search'){$('conversation-search').focus();$('conversation-search').select();}else if(name.startsWith('layout-'))await setLayout(Number(name.split('-')[1]));else if(name==='focus-terminal'){focused=!focused;renderWorkspace();}else if(name==='window-shown'&&mode==='preview'&&currentURL)showBrowser();}));
+api.onShortcut(name=>run(async()=>{if(name==='add-project')await addProject();else if(name==='new-conversation')newMenu();else if(name==='new-shell')await createTerminal('shell');else if(name==='toggle-preview')await(mode==='preview'?terminalMode():openPreview());else if(name==='search'){setSidebarCollapsed('conversations',false);$('conversation-search').focus();$('conversation-search').select();}else if(name.startsWith('layout-'))await setLayout(Number(name.split('-')[1]));else if(name==='focus-terminal'){focused=!focused;renderWorkspace();}else if(name==='window-shown'&&mode==='preview'&&currentURL)showBrowser();}));
 new ResizeObserver(()=>{requestAnimationFrame(fitTerminals);updatePreviewBounds();}).observe($('terminal-workspace'));new ResizeObserver(updatePreviewBounds).observe($('browser-surface'));window.addEventListener('resize',()=>{fitTerminals();updatePreviewBounds();});
 for(const [id,name]of [['brand-icon','orbit'],['search-icon','search'],['history-icon','history'],['folder-icon','folder'],['globe-icon','globe'],['reload-preview','reload'],['expand-preview','expand'],['layout-button','layout']])$(id).innerHTML=icon(name);
 run(async()=>{state=await api.getState();render();});
 
 const sidebarDefaults={projects:180,conversations:320};
+let sidebarCollapsed={projects:false,conversations:false};
+try{const saved=JSON.parse(localStorage.getItem('orbit-sidebar-collapsed')||'{}');for(const key of Object.keys(sidebarCollapsed))if(typeof saved[key]==='boolean')sidebarCollapsed[key]=saved[key];}catch{}
+function setSidebarCollapsed(key,value){sidebarCollapsed[key]=value;try{localStorage.setItem('orbit-sidebar-collapsed',JSON.stringify(sidebarCollapsed));}catch{}applySidebarWidths();}
+for(const key of ['projects','conversations']){$(`collapse-${key}`).onclick=()=>setSidebarCollapsed(key,true);$(`show-${key}`).onclick=()=>setSidebarCollapsed(key,false);}
 let sidebarWidths={...sidebarDefaults};
 try{const saved=JSON.parse(localStorage.getItem('orbit-sidebar-widths')||'{}');for(const key of Object.keys(sidebarWidths))if(Number.isFinite(saved[key]))sidebarWidths[key]=saved[key];}catch{}
 function applySidebarWidths(save=false){
- sidebarWidths.projects=Math.round(Math.max(120,Math.min(340,sidebarWidths.projects,innerWidth-530)));
- sidebarWidths.conversations=Math.round(Math.max(210,Math.min(600,sidebarWidths.conversations,innerWidth-sidebarWidths.projects-310)));
+ for(const key of ['projects','conversations']){document.body.classList.toggle(`${key}-collapsed`,sidebarCollapsed[key]);$(`show-${key}`).hidden=!sidebarCollapsed[key];}
+ if(!sidebarCollapsed.projects)sidebarWidths.projects=Math.round(Math.max(120,Math.min(340,sidebarWidths.projects,innerWidth-530)));
+ if(!sidebarCollapsed.conversations)sidebarWidths.conversations=Math.round(Math.max(210,Math.min(600,sidebarWidths.conversations,innerWidth-(sidebarCollapsed.projects?0:sidebarWidths.projects)-310)));
  for(const [key,panelId,handleId,min,max] of [['projects','project-sidebar','project-resizer',120,340],['conversations','conversation-sidebar','conversation-resizer',210,600]]){
   $(panelId).style.width=`${sidebarWidths[key]}px`;const handle=$(handleId);handle.setAttribute('aria-valuemin',min);handle.setAttribute('aria-valuemax',max);handle.setAttribute('aria-valuenow',sidebarWidths[key]);
  }

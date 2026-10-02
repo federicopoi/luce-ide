@@ -378,3 +378,11 @@ dialog { background:#25292c; border-color:#444b50; padding:18px; }
 .project-rail, .conversation-sidebar { border-right:0; }
 .terminal-body .xterm-dim { color:#b8bec6!important; }
 .terminal-body .xterm-cursor-layer { opacity:1; }
+
+/* Independently collapsed sidebars keep restore controls in the titlebar. */
+.rail-label { display:flex; align-items:center; justify-content:space-between; padding-bottom:8px; }
+.rail-label .icon-button, #collapse-conversations { width:22px; height:24px; font-size:20px; color:#89949d; }
+.project-title-row h1 { flex:1; min-width:0; }
+.sidebar-restore { font-size:12px; border:1px solid #39424a; height:26px; width:auto; padding:0 8px; white-space:nowrap; }
+.projects-collapsed #project-sidebar, .projects-collapsed #project-resizer,
+.conversations-collapsed #conversation-sidebar, .conversations-collapsed #conversation-resizer { display:none!important; }

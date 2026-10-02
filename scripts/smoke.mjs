@@ -24,6 +24,13 @@ try{
   widths[selector]=(await panel.boundingBox()).width;assert.ok(Math.abs(widths[selector]-before-delta)<2,'Dragging changes the sidebar width');
  }
  const keyboardHandle=page.getByRole('separator',{name:'Resize projects sidebar'});await keyboardHandle.focus();await page.keyboard.press('ArrowRight');widths['.project-rail']+=10;assert.ok(Math.abs((await page.locator('.project-rail').boundingBox()).width-widths['.project-rail'])<2);
+ const workspaceBefore=(await page.locator('.workspace').boundingBox()).width;
+ for(const name of ['Collapse projects sidebar','Collapse conversations sidebar']){const button=page.getByRole('button',{name,exact:true});assert.equal(await button.count(),1,'Each sidebar has a collapse button');await button.click();}
+ assert.equal(await page.locator('.project-rail').isVisible(),false);assert.equal(await page.locator('.conversation-sidebar').isVisible(),false);
+ assert.ok((await page.locator('.workspace').boundingBox()).width>workspaceBefore+400);
+ await page.reload();await page.getByRole('button',{name:'Show projects sidebar',exact:true}).waitFor();assert.equal(await page.locator('.conversation-sidebar').isVisible(),false,'Collapsed state survives reload');
+ for(const name of ['Show projects sidebar','Show conversations sidebar'])await page.getByRole('button',{name,exact:true}).click();
+ for(const [selector,width] of Object.entries(widths))assert.ok(Math.abs((await page.locator(selector).boundingBox()).width-width)<2,'Restoring preserves sidebar widths');
  const session=await page.evaluate(id=>window.orbit.createTerminal({projectId:id,provider:'shell'}),p1.id);
  await page.locator('[data-session-id="'+session.id+'"] .xterm').waitFor();
  await page.evaluate(({id})=>window.orbit.writeTerminal(id,"printf 'ORBIT_SMOKE_%s\\n' OK\r"),session);
