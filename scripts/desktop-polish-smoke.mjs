@@ -1,0 +1,40 @@
+import {_electron as electron} from 'playwright';
+import assert from 'node:assert/strict';
+import {mkdtemp,mkdir,rm} from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+const root=await mkdtemp(path.join(os.tmpdir(),'luce-polish-'));let app;
+try{
+ const folder=path.join(root,'Studio');await mkdir(folder);await mkdir('artifacts',{recursive:true});
+ app=await electron.launch({args:[path.resolve('.')],env:{...process.env,SHELL:'/bin/bash',LUCE_TEST:'1',LUCE_PROFILE:path.join(root,'profile'),LUCE_HISTORY_HOME:path.join(root,'history')}});
+ const page=await app.firstWindow();await page.getByText('Open a project',{exact:true}).waitFor();
+ const p=await page.evaluate(dir=>window.luce.addProject(dir),folder);
+ await page.locator('#find-sessions').click();await page.locator('#discovery-search').fill('no matching folder');
+ const search=await page.locator('#discovery-search').evaluate(el=>({inner:getComputedStyle(el).borderWidth,outer:getComputedStyle(el.parentElement).borderRadius,height:el.parentElement.getBoundingClientRect().height}));
+ assert.equal(search.inner,'0px','Search input has one border, supplied by its wrapper');assert.ok(parseFloat(search.outer)>=8&&search.height>=38,'Search has a rounded comfortable hit target');
+ await page.screenshot({path:'artifacts/polish-discovery.png'});await page.getByRole('button',{name:'Close dialog'}).click();
+ assert.equal(await page.locator('.utility-rail #collapse-projects').count(),1,'Navigation view control lives with the other tools');
+ await page.locator('#collapse-projects').click();assert.equal(await page.locator('#project-sidebar').isVisible(),false);
+ assert.equal(await page.locator('#collapse-projects').getAttribute('aria-expanded'),'false');
+ await page.reload();await page.getByRole('button',{name:'Toggle projects sidebar'}).waitFor();
+ assert.equal(await page.locator('#project-sidebar').isVisible(),false,'Hidden navigation survives reload');
+ await page.locator('#collapse-projects').click();assert.equal(await page.locator('#project-sidebar').isVisible(),true);
+ const s=await page.evaluate(id=>window.luce.createTerminal({projectId:id,provider:'shell'}),p.id);
+ await page.locator('.xterm').waitFor();await page.evaluate(id=>window.luce.writeTerminal(id,"printf '\\033[2J\\033[HDefault background\\n\\033[40mANSI black background\\033[0m\\nSelect these lines to copy\\n'\r"),s.id);
+ await page.waitForTimeout(500);
+ const screen=page.locator('.xterm-screen');const rect=await screen.boundingBox();
+ await page.mouse.move(rect.x+2,rect.y+3);await page.mouse.down();await page.mouse.move(rect.x+rect.width-10,rect.y+75,{steps:12});await page.mouse.up();
+ const selection=page.locator('.xterm-selection div');await selection.first().waitFor();
+ const color=await selection.first().evaluate(el=>getComputedStyle(el).backgroundColor);
+ // xterm's DOM renderer blends the translucent theme color onto its background.
+ const channels=color.match(/[\d.]+/g).slice(0,3).map(Number);
+ assert.ok(channels.every(channel=>channel<55),'Selection stays subtle instead of turning a pane gray');
+ await page.screenshot({path:'artifacts/polish-terminal.png'});
+ await page.locator('#collapse-projects').click({button:'right'});await page.locator('#popup').getByRole('button',{name:/Use project (tabs|sidebar)/}).click();await page.locator('#project-tabs').waitFor();
+ await page.screenshot({path:'artifacts/polish-tabs.png'});
+ await page.getByRole('button',{name:'Toggle conversations sidebar'}).click();assert.equal(await page.locator('#project-sidebar').isVisible(),false);
+ assert.equal(await page.locator('#project-tabs').isVisible(),true,'Hiding conversations keeps project tabs available');
+ await page.getByRole('button',{name:'Toggle conversations sidebar'}).click();assert.equal(await page.locator('#conversation-sidebar').isVisible(),true);
+ assert.equal((await page.evaluate(()=>window.luce.getState())).terminals.filter(t=>t.status==='running').length,1,'Design changes preserve the terminal');
+ console.log('PASS: single-border discovery search, rail navigation control, translucent terminal selection, retained PTY');
+}finally{if(app)await app.close();await rm(root,{recursive:true,force:true});}

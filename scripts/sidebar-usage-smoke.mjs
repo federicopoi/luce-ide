@@ -38,14 +38,14 @@ try{
  assert.equal(await page.locator('#recent-content').isVisible(),true);
 
  const preferredHeight=(await page.locator('#projects-section').boundingBox()).height;
- await page.getByRole('button',{name:'Collapse projects sidebar'}).click();
+ await page.getByRole('button',{name:'Toggle projects sidebar'}).click();
 
- const brand=page.locator('.brand'),restore=page.getByRole('button',{name:'Show projects sidebar'});
- assert.ok((await restore.boundingBox()).x>(await brand.boundingBox()).x+(await brand.boundingBox()).width,'Collapsed rail restore control sits beside brand');
- assert.ok((await restore.boundingBox()).x+(await restore.boundingBox()).width<(await page.locator('.titlebar-spacer').boundingBox()).x,'Restore control precedes titlebar spacer');
+ const brand=page.locator('.brand'),restore=page.getByRole('button',{name:'Toggle projects sidebar'});
+ assert.ok((await restore.boundingBox()).x<(await brand.boundingBox()).x,'Collapsed navigation can be restored from the left tool rail');
+ assert.equal(await page.locator('.utility-rail #collapse-projects').count(),1);
  await page.reload();
- await page.getByRole('button',{name:'Show projects sidebar'}).waitFor();
- const restoreAfterReload=page.getByRole('button',{name:'Show projects sidebar'});
+ await page.getByRole('button',{name:'Toggle projects sidebar'}).waitFor();
+ const restoreAfterReload=page.getByRole('button',{name:'Toggle projects sidebar'});
  assert.ok((await restoreAfterReload.boundingBox()).x+(await restoreAfterReload.boundingBox()).width<(await page.locator('.titlebar-spacer').boundingBox()).x,'Restore placement survives reload while navigation is hidden');
  await restoreAfterReload.click();
 

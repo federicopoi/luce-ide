@@ -1,5 +1,5 @@
 /* Desktop design system. Layout mechanics stay in styles.css. */
-:root{--canvas:#181818;--surface:#202020;--raised:#292929;--hover:#ffffff08;--selected:#ffffff0d;--text:#ededed;--muted:#939393;--border:#ffffff0d;--mint:#dedede;--accent:#dedede;--panel:var(--surface);color:var(--text);background:var(--surface);font-size:13px}
+:root{--canvas:#1c1c1c;--surface:#202020;--raised:#292929;--hover:#ffffff08;--selected:#ffffff0d;--text:#ededed;--muted:#939393;--border:#ffffff0d;--mint:#dedede;--accent:#dedede;--panel:var(--surface);color:var(--text);background:var(--surface);font-size:13px}
 [hidden]{display:none!important}
 body{background:var(--surface);height:100vh;overflow:clip}
 button{transition:background .12s ease,color .12s ease}
@@ -97,7 +97,7 @@ svg{stroke-width:1.5}
 .terminal-pane,.terminal-pane.active{border:0;border-radius:0;background:var(--canvas);box-shadow:none}
 .pane-header{height:42px;padding:0 16px;background:var(--canvas);border-bottom:1px solid var(--border);gap:8px;font-size:12px;color:#939393}
 .terminal-pane{container-type:inline-size}
-.terminal-pane.active>.pane-header{color:#d7d7d7;background:#1c1c1c;box-shadow:none}
+.terminal-pane.active>.pane-header{color:#d7d7d7;background:var(--canvas);box-shadow:none}
 .pane-title{font-size:12px;font-weight:450;min-width:60px}
 .pane-disk{display:block;color:#696969;font-size:10px}.pane-disk.unavailable{display:none}
 .pane-account,.pane-usage{font-size:10px;color:#909090;border:0;border-radius:5px;padding:4px 5px}
@@ -172,6 +172,20 @@ dialog::backdrop{background:#0008;backdrop-filter:blur(3px)}
 .modal-heading{margin-bottom:20px}.modal-heading h2{font-size:19px;font-weight:500;letter-spacing:-.4px}
 #modal-content{color:#aaa;font-size:12px;line-height:1.65}
 #modal-content input:not([type=checkbox]),#modal-content select{background:#1c1c1c;border:1px solid #ffffff18;border-radius:8px;color:#d2d2d2;padding:9px 12px;font-size:12px}
+#modal-content .search-field{height:42px;border:1px solid #ffffff18;border-radius:9px;background:#1c1c1c;padding:0 12px;gap:9px;margin:16px 0 12px}
+#modal-content .search-field:focus-within{border-color:#747474;box-shadow:0 0 0 2px #ffffff06}
+#modal-content .search-field input{border:0;border-radius:0;padding:0;background:transparent;height:100%;outline:none}
+#modal-content .search-field svg{width:16px;height:16px;color:#939393;flex-shrink:0}
+#modal-content input::selection{background:#ffffff24;color:#eee}
+.discover-list{padding:0;min-height:90px}
+.discover-item{padding:12px;border-radius:9px;gap:12px;margin:3px 0}
+.discover-item:hover{background:#ffffff08}
+.discover-item>div{min-width:0;flex:1}
+.discover-item strong{font-size:13px;font-weight:500;color:#e0e0e0}
+.discover-item small{font-size:11px;color:#8d8d8d;max-width:100%;margin:2px 0}
+.discover-item .muted{font-size:10px}
+.discover-item .project-initial{width:26px;height:26px;color:#aaa;flex-shrink:0}
+.discover-list .empty-list{padding:16px 12px;text-align:center;color:#909090;font-size:12px}
 #modal-actions{gap:8px;margin-top:24px}
 #modal-cancel{border:1px solid #ffffff15;border-radius:8px;color:#ccc;padding:8px 13px}
 .accounts-tabs{border-color:#ffffff12;gap:8px;background:#1d1d1d}
@@ -205,10 +219,16 @@ dialog::backdrop{background:#0008;backdrop-filter:blur(3px)}
 .project-status-dot.project-completion-dot small{color:#8bbd9c}
 .project-completion-dot.attention{background:#c1a274}
 .sound-setting-row input{accent-color:#bac8de}
-.project-tabs{background:#242424;border-color:#ffffff0a;height:38px}
-.project-tabs .project-tab{border-radius:7px;min-width:100px;color:#999;margin-bottom:3px}
-.project-tabs .project-tab.selected{background:#333;color:#eee;border-color:transparent;box-shadow:none}
-.project-tabs-view .app-layout{height:calc(100vh - 82px)}
+.project-tabs{background:#242424;border:0;height:48px;padding:4px 10px 8px 60px;gap:8px}
+.project-tabs #project-tabs-list{gap:6px;align-items:center;scrollbar-width:thin}
+.project-tabs .project-tab{height:36px;min-width:120px;max-width:250px;border:1px solid transparent;border-radius:9px;padding:0 13px;margin:0;gap:9px;color:#a3a3a3}
+.project-tabs .project-tab:hover{background:#ffffff06;color:#dedede}
+.project-tabs .project-tab.selected{background:#333;color:#eee;border:1px solid #ffffff0d;box-shadow:0 1px 2px #0002}
+.project-tabs .project-tab .project-initial svg{width:16px;height:16px}
+.project-tabs .project-tab .project-name{font-size:12px;font-weight:450}
+.project-tabs .project-tab .project-terminal-count{background:#ffffff08;color:#a5a5a5;font-size:10px}
+.project-tabs #tab-add-project{align-self:center;width:32px;height:32px;border-radius:8px;color:#aaa;margin:0}
+.project-tabs-view .app-layout{height:calc(100vh - 92px)}
 .project-tabs-view #project-sidebar{display:flex!important}
 .project-tabs-view #navigation-fallback{order:0}
 .project-tabs-view .conversation-sidebar{padding-left:0}
@@ -221,8 +241,7 @@ dialog::backdrop{background:#0008;backdrop-filter:blur(3px)}
 @media(prefers-reduced-motion:reduce){button,.file-chevron svg{transition:none}}
 
 .navigation-actions{display:flex;align-items:center;gap:3px}
-.navigation-actions #project-view-button{width:28px;height:28px}
-.navigation-actions #project-view-button svg{width:18px;height:18px}
+.utility-rail #collapse-projects[aria-expanded=true]{background:#ffffff08;color:#ddd}
 .utility-rail #browse-files{margin:0}
 
 .preview-stage .app-layout{height:calc(100vh - 44px)}
