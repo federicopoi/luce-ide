@@ -11,11 +11,12 @@ Agent terminal headers have an **Auto** switch. It starts off in each new termin
 Open `~/Applications/Luce.app`. Add a project folder, or choose **Find local sessions** to add a folder from your existing agent histories. Select a project in the left rail. Its live terminals and saved conversations appear beside it.
 
 - **Recent conversations:** the Projects rail shows saved conversations from all local Codex and Claude folders, newest first and grouped by date. Search by title, folder, or provider. Click to open or focus an existing terminal. Right-click **Add to project** to choose an existing project or create a named project group; you can also drag a conversation onto a project. Organization preserves the conversation’s original working folder. Discovery refreshes every 20 seconds, with a manual refresh button.
+- **Global search:** press **⌘ K** or use **Search all conversations** to search saved histories from every local folder and open sessions across projects. Match titles, folder paths, providers and Codex account names. Results show their folder and timestamp; clearing returns to the selected project. Transcript body text is not indexed by this search.
 - **New conversation:** start Codex, Claude Code, or a project shell using your installed tools. Codex uses the selected project account; Claude uses its existing login.
 - **Previous:** click a saved conversation to resume it with its original provider. Open conversations appear under Open terminals and return to Conversations when closed. Names set in Luce appear consistently in the terminal, saved history, and Recent conversations.
 - **Layouts:** use the grid button for one, two, or four terminals. Drag a divider between panes to resize them; proportions are remembered per project. A pane's menu can focus, rename, preview, or close that terminal.
 - **Preview:** click a website link in terminal output to open it in that terminal’s Luce preview. You can also run your website’s dev server. A browser icon appears in each terminal header when its detected local URL responds, or when Luce finds an HTTP server listening from that project folder. Click it to preview that terminal’s website. The icon disappears when the server stops. Use the terminal’s menu to enter a URL manually. Expand hides the sidebars; Back to terminal restores the running terminals.
-- **Navigation:** projects and their conversations share one resizable sidebar. Use the chevron beside Luce to hide it, then restore it from the titlebar. Visibility and width are remembered. The slim tool rail contains search, phone access, accounts, and settings; project files and GitHub controls appear above the workspace.
+- **Navigation:** projects and their conversations share one resizable sidebar. The folder/conversation icon in the slim tool rail hides or restores it; visibility and width are remembered. Right-click that icon, use Settings, or use the native View menu to choose project tabs or the project sidebar. The tool rail also contains search, phone access, project files, accounts and settings; GitHub controls appear above the workspace.
 - **Sidebar widths:** drag either vertical divider to resize Projects or Conversations. Widths are remembered. Focus a divider and use Left/Right arrows for 10px steps; double-click or press Home to reset.
 - **Sidebar sections:** drag the horizontal divider between Projects and Recent conversations to change their heights. Each section can fold independently, and the split is remembered.
 - **Project options:** rename a project or remove it from Luce without deleting its files.
@@ -43,7 +44,7 @@ Luce stores workspace metadata in `~/Library/Application Support/Orbit/workspace
 
 The preview browser is isolated from Luce's terminal/filesystem bridge. It supports HTTP and HTTPS, including localhost development servers. Browser permissions and pop-up windows are disabled in this build.
 
-This is an Apple Silicon personal test build with an ad-hoc signature, not a notarized distribution build. Shells load your existing shell configuration, so existing shell startup messages also appear inside Luce.
+This is an Apple Silicon personal build with a persistent local signing certificate. It is not a notarized distribution build. Signing identity is reused so macOS can recognize Luce across updates; see [Mac folder permissions](docs/mac-permissions.md) for the one-time setup. Shells load your existing shell configuration, so existing shell startup messages also appear inside Luce.
 
 ## Develop and rebuild
 
@@ -135,7 +136,7 @@ Pasted images and temporary screenshot drops are stored as private, persistent i
 
 In the four-pane layout, click a terminal header's **Fill column** button (or choose it from ⋯) to use the empty pane above or below it. The other column keeps its two terminals and resize handle. **Restore column split** brings the empty pane back. Filling never covers an occupied pane.
 
-Luce reopens the last workspace after quitting: selected project, open saved Codex/Claude conversations and accounts, fresh shells in their working folders, terminal positions, active/focused view, website preview, sizes, column fills, and existing project/sidebar/tab preferences. Shell commands and jobs are not replayed, and Auto starts off. Missing conversations or signed-out accounts produce restore guidance while the remaining terminals reopen. Conversation content comes from provider history; unsaved shell output and partially typed input are not recovered.
+Luce reopens the last workspace after quitting: selected project, open saved Codex/Claude conversations and accounts, fresh shells in their working folders, terminal positions, active/focused view, website preview, sizes, column fills, and existing project/sidebar/tab preferences. Shell commands and jobs are not replayed, and Auto starts off. Missing conversations or signed-out accounts stay quiet while the remaining terminals reopen; saved history and restore records are retained. Conversation content comes from provider history; unsaved shell output and partially typed input are not recovered.
 
 
 ## Project files

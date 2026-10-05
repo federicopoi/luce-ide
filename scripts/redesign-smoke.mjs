@@ -19,7 +19,7 @@ try{
  assert.ok(Math.abs(a.x-b.x)<40&&b.x+b.width<=a.x+a.width+1,'Projects and conversations share a single navigation column');
  assert.equal(await page.locator('#terminal-workspace .welcome').count(),1,'Empty project has one start view');
  assert.equal(await page.locator('#terminal-workspace .pane-empty').count(),0);
- await page.getByRole('textbox',{name:'Search conversations',exact:true}).focus();
+ await page.getByRole('textbox',{name:'Search all local conversations',exact:true}).focus();
  await page.screenshot({path:'artifacts/redesign-empty.png'});
  await page.locator('.provider-choices [data-provider="shell"]').click();
  await until(()=>page.evaluate(async()=>(await window.luce.getState()).terminals.length===1));

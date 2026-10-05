@@ -244,3 +244,12 @@ dialog::backdrop{background:#0008;backdrop-filter:blur(3px)}
 .utility-rail #browse-files{margin:0}
 
 .preview-stage .app-layout{height:calc(100vh - 44px)}
+
+/* Primary search spans every project, including folders outside the workspace. */
+.global-search-active #recent-section{display:none!important}
+.global-search-active .conversation-sidebar{padding-left:0}
+.global-search-label{font-size:12px;color:#bfbfbf;margin-top:8px}
+.global-history-row{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;row-gap:3px;min-height:48px}
+.global-history-row .recent-title{grid-column:1/-1;overflow:hidden}
+.global-history-row .recent-context{grid-column:1;grid-row:2}
+.global-history-row .conversation-time{grid-column:2;grid-row:2;white-space:nowrap;font-size:10px;line-height:16px;color:#858585}
