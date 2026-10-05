@@ -9,6 +9,6 @@ function browserEnvironment(directory,env){
   const source=`if [[ -r "$LUCE_USER_ZDOTDIR/${name}" && "$LUCE_USER_ZDOTDIR" != "$LUCE_BROWSER_ZDOTDIR" ]]; then\n export ZDOTDIR="$LUCE_USER_ZDOTDIR"\n source "$LUCE_USER_ZDOTDIR/${name}"\nfi\nif [[ "$ZDOTDIR" != "$LUCE_BROWSER_ZDOTDIR" ]]; then\n export LUCE_USER_ZDOTDIR="$ZDOTDIR"\n [[ -n "$LUCE_USER_ZDOTDIR" ]] || export LUCE_USER_ZDOTDIR="$HOME"\nfi\nexport ZDOTDIR="$LUCE_BROWSER_ZDOTDIR"\ntypeset -U path\npath=("$LUCE_BROWSER_BIN" $path)\nexport PATH\n`;
   fs.writeFileSync(path.join(profiles,name),source,{mode:0o600});
  }
- return {...env,BROWSER:path.join(bin,'luce-browser'),PATH:`${bin}${path.delimiter}${env.PATH||''}`,LUCE_BROWSER_BIN:bin,LUCE_USER_ZDOTDIR:env.LUCE_USER_ZDOTDIR||env.ZDOTDIR||env.HOME||os.homedir(),LUCE_BROWSER_ZDOTDIR:profiles,ZDOTDIR:profiles};
+ return {...env,BROWSER:path.join(bin,'luce-browser'),PATH:`${bin}${path.delimiter}${env.PATH||''}`,LUCE_BROWSER_BIN:bin,LUCE_USER_ZDOTDIR:(env.ZDOTDIR&&env.ZDOTDIR!==env.LUCE_BROWSER_ZDOTDIR?env.ZDOTDIR:env.LUCE_USER_ZDOTDIR)||env.HOME||os.homedir(),LUCE_BROWSER_ZDOTDIR:profiles,ZDOTDIR:profiles};
 }
 module.exports={browserEnvironment};
