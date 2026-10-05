@@ -315,7 +315,13 @@ async function chooseAccountStart(){const content=document.createElement('div');
 
 function formatDiskSize(bytes){if(!Number.isFinite(bytes))return "—";return bytes>=1048576?`${(bytes/1048576).toFixed(1)} MB`:bytes>=1024?`${Math.ceil(bytes/1024)} KB`:`${bytes} B`;}
 
-function projectTerminalBadge(id){const working=state.terminals.filter(s=>s.projectId===id&&s.status==='running'&&s.working).length;const count=state.terminals.filter(s=>s.projectId===id&&s.status==='running').length;const finished=state.terminals.filter(s=>s.projectId===id&&s.completionPending).length;const attention=state.terminals.some(s=>s.projectId===id&&s.completionPending&&s.completionReason==='attention');return (working?`<span class="project-working-count project-status-dot" role="img" title="${working} agent${working===1?'':'s'} actively working" aria-label="${working} agent${working===1?'':'s'} actively working">${working>1?`<small>${working}</small>`:''}</span>`:'')+(finished?`<span class="project-completion-dot project-status-dot" role="img" title="${attention?'An agent needs your attention':`${finished} agent response${finished===1?'':'s'} finished`} — open project to review" aria-label="${attention?'An agent needs your attention':`${finished} agent response${finished===1?'':'s'} finished`}">${finished>1?`<small>${finished}</small>`:''}</span>`:'')+(count?`<span class="project-terminal-count" title="${count} running terminal${count===1?'':'s'}" aria-label="${count} running terminal${count===1?'':'s'}">${count}</span>`:'');}
+function projectTerminalBadge(id){
+ const sessions=state.terminals.filter(s=>s.projectId===id),count=sessions.filter(s=>s.status==='running').length,working=sessions.filter(s=>s.status==='running'&&s.working).length,finished=sessions.filter(s=>s.completionPending).length,attention=sessions.some(s=>s.completionPending&&s.completionReason==='attention');
+ if(!count&&!finished)return '';
+ const activity=[working?`${working} agent${working===1?'':'s'} actively working`:'',finished?`${finished} agent response${finished===1?'':'s'} finished`:'',attention?'An agent needs your attention':''].filter(Boolean).join(' · ');
+ const dot=activity?`<span class="project-status-dot${working?' project-working-count':''}${finished?' project-completion-dot':''}${working||attention?' attention':''}" role="img" title="${activity}" aria-label="${activity}"></span>`:'';
+ return `<span class="project-terminal-count" title="${count} open terminal${count===1?'':'s'}" aria-label="${count} open terminal${count===1?'':'s'}">${dot}${count}</span>`;
+}
 
 for(const name of ['dragover','drop'])document.addEventListener(name,event=>{if(event.dataTransfer?.types.includes('Files'))event.preventDefault();});
 

@@ -213,11 +213,9 @@ dialog::backdrop{background:#0008;backdrop-filter:blur(3px)}
 .empty-new{display:flex;align-items:center;gap:8px;color:#808080;border-radius:8px;padding:10px 14px;font-size:12px}
 .empty-new:hover{color:#ccc;background:#ffffff07}
 .empty-new span{font-size:19px;color:#666}
-.project-working-count{background:#83a8eb;box-shadow:none}
-.project-status-dot small{color:#83a8eb;background:#202020}
-.project-status-dot.project-completion-dot{background:#8bbd9c;box-shadow:none}
-.project-status-dot.project-completion-dot small{color:#8bbd9c}
-.project-completion-dot.attention{background:#c1a274}
+.project-terminal-count{position:relative;overflow:visible;flex-shrink:0}
+.project-terminal-count>.project-status-dot{position:absolute;top:-3px;left:50%;transform:translateX(-50%);width:5px;height:5px;min-width:0;margin:0;padding:0;border:0;border-radius:50%;background:#8bbd9c;box-shadow:none}
+.project-terminal-count>.project-status-dot.attention{background:#e5c454}
 .sound-setting-row input{accent-color:#bac8de}
 .project-tabs{background:#242424;border:0;height:48px;padding:4px 10px 8px 60px;gap:8px}
 .project-tabs #project-tabs-list{gap:6px;align-items:center;scrollbar-width:thin}

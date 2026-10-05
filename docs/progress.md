@@ -197,3 +197,8 @@ Verified 124 unit/integration tests, general app/Codex account/files-media/curre
 - Moved sidebar visibility into the left tool rail. The folder/chat icon shows or hides Projects/Conversations for the current mode, with persisted visibility and accessible expanded state. Removed the heading chevron and titlebar restore button. Right-click, Settings and the native View menu retain the project sidebar/tabs choice.
 - Verification: 128 unit tests; desktop polish, tabs, redesign, preview context, terminal resizing, sidebar usage, terminal links, file/media previews and drag paths, general app, completion and real session-relaunch checks. The file fixture now uses clean Bash startup, waits for layout and crosses terminal cells to avoid a stale xterm hover cache. Independent review resolved the distinction between mode selection and sidebar visibility. Installed bundle passed project-tabs checks, signature verification and archive parity.
 - Installed `~/Applications/Luce.app`, preserving `Luce-backup-1791217980155.app`. Running user app and terminals left open; quit/reopen loads the changes.
+
+### Simplified project activity dots — 2026-10-05
+
+- Project rows and tabs show one small status dot above the open-terminal count. Yellow covers work or required attention, green covers pending completion, and idle projects have no dot. Work/response subcounts and separate adjacent indicators are removed; detailed activity remains in accessible labels and tooltips.
+- Verified activity transitions, mixed working/completed agents, unchanged open counts, acknowledgments, sound/Auto behavior, reload persistence and project tabs using isolated completion and tabs fixtures. Built and signed the Mac app.
