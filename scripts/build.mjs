@@ -4,6 +4,7 @@ import {createHash} from 'node:crypto';
 await mkdir('dist',{recursive:true});
 await build({entryPoints:['src/renderer/app.js'],bundle:true,outfile:'dist/app.js',platform:'browser',format:'iife',target:'chrome140',minify:false});
 await copyFile('src/renderer/index.html','dist/index.html');await copyFile('src/renderer/styles.css','dist/styles.css');
+await copyFile('src/renderer/theme.css','dist/theme.css');
 await mkdir('dist/mobile',{recursive:true});
 await build({entryPoints:['src/mobile/mobile.js'],bundle:true,outfile:'dist/mobile/mobile.js',platform:'browser',format:'iife',target:['safari16.4','chrome120'],minify:true});
 for(const file of ['index.html','styles.css','sw.js','manifest.webmanifest'])await copyFile(`src/mobile/${file}`,`dist/mobile/${file}`);
