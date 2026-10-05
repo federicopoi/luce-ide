@@ -1,6 +1,14 @@
 import {build} from 'esbuild';
-import {mkdir,copyFile} from 'node:fs/promises';
+import {mkdir,copyFile,readFile,writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 await mkdir('dist',{recursive:true});
 await build({entryPoints:['src/renderer/app.js'],bundle:true,outfile:'dist/app.js',platform:'browser',format:'iife',target:'chrome140',minify:false});
 await copyFile('src/renderer/index.html','dist/index.html');await copyFile('src/renderer/styles.css','dist/styles.css');
+await mkdir('dist/mobile',{recursive:true});
+await build({entryPoints:['src/mobile/mobile.js'],bundle:true,outfile:'dist/mobile/mobile.js',platform:'browser',format:'iife',target:['safari16.4','chrome120'],minify:true});
+for(const file of ['index.html','styles.css','sw.js','manifest.webmanifest'])await copyFile(`src/mobile/${file}`,`dist/mobile/${file}`);
+await copyFile('assets/luce-mark.svg','dist/mobile/luce-mark.svg');
+for(const size of [256,512])await copyFile(`assets/Luce.iconset/icon_${size}x${size}.png`,`dist/mobile/icon-${size}.png`);
+const revision=createHash('sha256').update(await readFile('src/mobile/sw.js'));for(const file of ['mobile.js','mobile.css','styles.css','index.html','manifest.webmanifest'])revision.update(await readFile(`dist/mobile/${file}`));
+await writeFile('dist/mobile/sw.js',(await readFile('src/mobile/sw.js','utf8')).replace('luce-remote-shell-v1',`luce-remote-shell-${revision.digest('hex').slice(0,16)}`));
 console.log('Luce renderer built.');

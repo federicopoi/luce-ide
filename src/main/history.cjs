@@ -24,16 +24,16 @@ async function databaseSessions(root){
  for(const file of files)try{
   const db=path.join(root,file);const schema=JSON.parse((await execute('/usr/bin/sqlite3',['-readonly','-json',db,'pragma table_info(threads)'],{timeout:3000})).stdout||'[]');const cols=new Set(schema.map(c=>c.name));if(!cols.has('cwd'))continue;
   const name=cols.has('name')?"NULLIF(name, ''),":'';const hasUser=cols.has('has_user_event')?'AND has_user_event = 1':'';const archived=cols.has('archived')?'AND archived = 0':'';
-  const query=`SELECT id, cwd, COALESCE(${name}NULLIF(title,''), first_user_message, 'Codex conversation') AS title, updated_at, source FROM threads WHERE cwd IS NOT NULL ${hasUser} ${archived} ORDER BY updated_at DESC LIMIT 5000`;
+  const query=`SELECT id, cwd, ${cols.has('rollout_path')?'rollout_path,':''} COALESCE(${name}NULLIF(title,''), first_user_message, 'Codex conversation') AS title, updated_at, source FROM threads WHERE cwd IS NOT NULL ${hasUser} ${archived} ORDER BY updated_at DESC LIMIT 5000`;
   const {stdout}=await execute('/usr/bin/sqlite3',['-readonly','-json',db,query],{timeout:5000,maxBuffer:16*1024*1024});
-  return JSON.parse(stdout||'[]').filter(r=>!String(r.source).includes('subagent')).map(r=>({id:r.id,provider:'codex',directory:r.cwd,title:title(r.title,'Codex conversation'),updatedAt:new Date(Number(r.updated_at)*1000).toISOString()}));
+  return JSON.parse(stdout||'[]').filter(r=>!String(r.source).includes('subagent')).map(r=>({id:r.id,provider:'codex',directory:r.cwd,title:title(r.title,'Codex conversation'),transcriptPath:r.rollout_path||undefined,registeredPath:r.rollout_path||undefined,updatedAt:new Date(Number(r.updated_at)*1000).toISOString()}));
  }catch{}return [];
 }
-async function discover({home=os.homedir()}={}){
- const sessions=new Map(),codexRoot=path.join(home,'.codex'),claudeRoot=path.join(home,'.claude','projects');
+async function discover({home=os.homedir(),codexRoot=path.join(home,'.codex'),includeClaude=true,accountId='default'}={}){
+ const sessions=new Map(),claudeRoot=path.join(home,'.claude','projects');
  for(const session of await databaseSessions(codexRoot))sessions.set(`codex:${session.id}`,session);
  const names=new Map();try{for(const record of await records(path.join(codexRoot,'session_index.jsonl')))if(record.id)names.set(record.id,record);}catch{}
- const [codexFiles,claudeFiles]=await Promise.all([walk(path.join(codexRoot,'sessions')),walk(claudeRoot,1)]);
+ const [codexFiles,claudeFiles]=await Promise.all([walk(path.join(codexRoot,'sessions')),includeClaude?walk(claudeRoot,1):[]]);
  // Read a handful concurrently to avoid saturating the disk on large histories.
  const files=[...codexFiles.map(file=>({file,provider:'codex'})),...claudeFiles.map(file=>({file,provider:'claude'}))];
  for(let start=0;start<files.length;start+=12)await Promise.all(files.slice(start,start+12).map(async({file,provider})=>{try{
@@ -49,9 +49,10 @@ async function discover({home=os.homedir()}={}){
   }
   if(!id||!directory||!path.isAbsolute(directory))return;
   try{directory=await fs.realpath(directory);}catch{directory=path.normalize(directory);}
-  const key=`${provider}:${id}`,existing=sessions.get(key);if(existing){if(custom)existing.title=title(custom,existing.title);existing.updatedAt=latestDate(existing.updatedAt,updatedAt);existing.directory=directory;return;}
-  sessions.set(key,{id,provider,directory,title:title(custom||first,`${provider==='codex'?'Codex':'Claude'} conversation`),updatedAt:updatedAt||new Date((await fs.stat(file)).mtimeMs).toISOString()});
+  const key=`${provider}:${id}`,existing=sessions.get(key);if(existing){if(custom)existing.title=title(custom,existing.title);if(!existing.registeredPath&&(!existing.transcriptPath||Date.parse(updatedAt)>=Date.parse(existing.updatedAt)))existing.transcriptPath=file;existing.updatedAt=latestDate(existing.updatedAt,updatedAt);existing.directory=directory;return;}
+  sessions.set(key,{id,provider,directory,transcriptPath:file,title:title(custom||first,`${provider==='codex'?'Codex':'Claude'} conversation`),updatedAt:updatedAt||new Date((await fs.stat(file)).mtimeMs).toISOString()});
  }catch{}}));
+ await Promise.all([...sessions.values()].map(async s=>{if(s.provider==='codex')s.accountId=accountId;try{s.diskBytes=(await fs.stat(s.transcriptPath)).size;}catch{s.diskBytes=null;}}));
  const sorted=[...sessions.values()].sort((a,b)=>Date.parse(b.updatedAt)-Date.parse(a.updatedAt));const projects=[...new Set(sorted.map(s=>s.directory))].map(directory=>({directory,name:path.basename(directory),count:sorted.filter(s=>s.directory===directory).length}));
  return {sessions:sorted,projects};
 }

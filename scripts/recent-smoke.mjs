@@ -12,6 +12,7 @@ try{
  app=await electron.launch(options);const page=await app.firstWindow();await page.getByText('Open a project',{exact:true}).waitFor();await page.evaluate(dir=>window.luce.addProject(dir),known);
  assert.equal(await page.locator('#project-heading').count(),0,'No redundant project label in the titlebar');assert.equal(await page.getByRole('button',{name:'Toggle recent conversations',exact:true}).count(),1);
  await page.evaluate(()=>window.luce.refreshHistory());await page.locator('.recent-row').first().waitFor();assert.equal(await page.locator('.recent-row').count(),2);assert.match(await page.locator('.recent-row').first().textContent(),/Newest external conversation/);
+ assert.equal(await page.locator('.recent-size').count(),2);for(const label of await page.locator('.recent-size').allTextContents())assert.match(label,/^[0-9]+(?:\.[0-9]+)? (?:B|KB|MB)$/);
  await page.getByRole('textbox',{name:'Search all conversations'}).fill('external');assert.equal(await page.locator('.recent-row').count(),1);
  await page.locator('.recent-row').first().click({button:'right'});await page.getByRole('button',{name:'Add folder to projects',exact:true}).click();
  assert.equal((await page.evaluate(()=>window.luce.getState())).projects.length,2);assert.equal((await page.evaluate(()=>window.luce.getState())).terminals.length,0,'Organizing a folder does not launch a conversation');

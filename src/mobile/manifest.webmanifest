@@ -1,0 +1,14 @@
+{
+  "name": "Luce Remote",
+  "short_name": "Luce",
+  "description": "Secure phone control for Luce on your Mac",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#181a1b",
+  "theme_color": "#222426",
+  "icons": [
+    { "src": "/icon-256.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

@@ -13,12 +13,30 @@
     "smoke": "node scripts/smoke.mjs",
     "package": "node scripts/package.mjs",
     "install:app": "node scripts/install.mjs",
-    "smoke:recents": "node scripts/recent-smoke.mjs"
+    "smoke:recents": "node scripts/recent-smoke.mjs",
+    "smoke:accounts": "node scripts/accounts-smoke.mjs",
+    "smoke:codex-startup": "node scripts/codex-startup-smoke.mjs",
+    "smoke:remote-submit": "node scripts/remote-submit-smoke.cjs",
+    "smoke:auto-approval": "node scripts/auto-approval-smoke.mjs",
+    "smoke:remote": "node scripts/remote-smoke.mjs",
+    "smoke:relay": "node scripts/remote-relay-smoke.mjs",
+    "smoke:mobile": "node scripts/remote-mobile-smoke.mjs",
+    "smoke:terminal-resize": "node scripts/terminal-resize-smoke.mjs",
+    "smoke:sidebar-usage": "node scripts/sidebar-usage-smoke.mjs",
+    "smoke:organization": "node scripts/workspace-organization-smoke.mjs",
+    "smoke:terminal-links": "node scripts/terminal-links-smoke.mjs",
+    "smoke:completion": "node scripts/completion-smoke.mjs",
+    "smoke:project-tabs": "node scripts/project-tabs-smoke.mjs",
+    "smoke:workspace-resume": "node scripts/workspace-resume-smoke.mjs"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-web-links": "^0.12.0",
     "@xterm/xterm": "^6.0.0",
-    "node-pty": "^1.1.0"
+    "node-pty": "^1.1.0",
+    "qrcode": "^1.5.4",
+    "web-push": "^3.6.7",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@electron/packager": "^20.3.0",

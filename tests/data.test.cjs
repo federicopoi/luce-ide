@@ -18,6 +18,19 @@ test('project changes survive reload, duplicate paths collapse, removal leaves f
  assert.throws(()=>store.addProject(path.join(root,'missing')),/directory|folder/i);
  assert.throws(()=>store.updateProject(project.id,{layout:3}),/layout|project/i);
 });
+test('moving projects persists order without changing selection or metadata and rejects missing targets',t=>{
+ const root=fixture(t),file=path.join(root,'state.json'),store=new Store(file);
+ const projects=['one','two','three'].map(name=>{const folder=path.join(root,name);fs.mkdirSync(folder);return store.addProject(folder);});
+ store.setSelected(projects[1].id);store.updateProject(projects[0].id,{name:'Custom title',layout:2});
+ store.moveProject(projects[2].id,projects[0].id,false);
+ assert.deepEqual(new Store(file).snapshot().projects.map(p=>p.id),[projects[2].id,projects[0].id,projects[1].id]);
+ store.moveProject(projects[2].id,projects[1].id,true);
+ assert.deepEqual(store.snapshot().projects.map(p=>p.id),projects.map(p=>p.id));
+ assert.equal(store.snapshot().selectedProjectId,projects[1].id);assert.equal(store.snapshot().projects[0].name,'Custom title');assert.equal(store.snapshot().projects[0].layout,2);
+ const saved=fs.readFileSync(file,'utf8');
+ for(const args of [['missing',projects[0].id,false],[projects[0].id,'missing',true],[projects[0].id,projects[1].id,'after']])assert.throws(()=>store.moveProject(...args));
+ assert.equal(fs.readFileSync(file,'utf8'),saved);
+});
 test('corrupt state is preserved and replaced by a usable empty workspace',t=>{
  const root=fixture(t),file=path.join(root,'state.json');fs.writeFileSync(file,'bad json');const store=new Store(file);
  assert.equal(store.snapshot().projects.length,0);assert.ok(fs.readdirSync(root).some(n=>n.startsWith('state.json.corrupt')));
@@ -59,3 +72,5 @@ test('global history spans project folders and sorts by latest activity rather t
  fs.writeFileSync(path.join(home,'.codex','session_index.jsonl'),JSON.stringify({id:'recent-session',thread_name:'Newest conversation',updated_at:'2026-09-01T01:00:00Z'}));
  const result=await discover({home});assert.equal(result.projects.length,2);assert.equal(result.sessions[0].id,'recent-session');assert.equal(result.sessions[0].updatedAt,'2026-10-02T05:10:00.000Z');
 });
+
+test('history indexes an isolated Codex home and preserves the source transcript path',async t=>{const home=fs.mkdtempSync(path.join(os.tmpdir(),'luce-isolated-'));t.after(()=>fs.rmSync(home,{recursive:true,force:true}));const root=path.join(home,'account'),dir=path.join(root,'sessions');fs.mkdirSync(dir,{recursive:true});const file=path.join(dir,'session.jsonl');fs.writeFileSync(file,[JSON.stringify({type:'session_meta',payload:{id:'isolated-session',cwd:home,timestamp:new Date().toISOString()}}),JSON.stringify({type:'response_item',payload:{role:'user',content:'Personal conversation'}})].join('\n'));const result=await discover({home,codexRoot:root,includeClaude:false,accountId:'personal'});assert.equal(result.sessions.length,1);assert.equal(result.sessions[0].accountId,'personal');assert.equal(result.sessions[0].transcriptPath,file);assert.equal(result.sessions[0].diskBytes,fs.statSync(file).size);});

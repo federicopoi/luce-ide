@@ -5,3 +5,14 @@ release/
 artifacts/*.png
 artifacts/*.log
 artifacts/test-profile/
+
+relay/.wrangler/
+relay/.dev.vars
+
+# Local previews, build artifacts and credentials
+artifacts/
+.DS_Store
+.env
+.env.*
+*.pem
+*.key

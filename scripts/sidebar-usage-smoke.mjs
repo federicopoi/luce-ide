@@ -1,0 +1,88 @@
+import {_electron as electron} from 'playwright';
+import assert from 'node:assert/strict';
+import {mkdtemp,mkdir,readFile,writeFile,chmod,rm} from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
+const root=await mkdtemp(path.join(os.tmpdir(),'luce-sidebar-smoke-'));
+const home=path.join(root,'history'),project=path.join(root,'Project'),fixture=path.join(root,'codex');
+await mkdir(project,{recursive:true});
+await mkdir(path.join(home,'.codex/sessions'),{recursive:true});
+const fixtureSource=(await readFile('tests/fixtures/codex-account.cjs','utf8')).replace('const fs=require','let rateLimitReads=0;const fs=require').replace("case 'account/rateLimits/read':result=","case 'account/rateLimits/read':if(++rateLimitReads>1){send({id:r.id,error:{message:'fixture quota refresh failed'}});return;}result=");
+await writeFile(fixture,fixtureSource);
+await chmod(fixture,0o755);
+let app;
+async function until(check){for(let i=0;i<150;i++){if(await check())return;await new Promise(resolve=>setTimeout(resolve,50));}throw Error('Timed out waiting for isolated sidebar fixture');}
+try{
+ const options={args:[path.resolve('.')],env:{...process.env,LUCE_PROFILE:path.join(root,'profile'),LUCE_TEST:'1',LUCE_HISTORY_HOME:home,LUCE_CODEX_EXECUTABLE:fixture},timeout:30000};
+ if(process.env.LUCE_EXECUTABLE){options.executablePath=process.env.LUCE_EXECUTABLE;options.args=[];}
+ app=await electron.launch(options);
+ const page=await app.firstWindow();
+ await app.evaluate(({dialog})=>{dialog.showMessageBox=async()=>({response:1});});
+ await page.getByText('Open a project',{exact:true}).waitFor();
+ const p=await page.evaluate(dir=>window.luce.addProject(dir),project);
+ const divider=page.getByRole('separator',{name:'Resize project and recent sections'});
+ assert.equal(await divider.count(),1,'Rail exposes one accessible section divider');
+ assert.equal(await divider.getAttribute('aria-orientation'),'horizontal');
+ const projects=page.locator('#projects-section'),before=(await projects.boundingBox()).height,bounds=await divider.boundingBox();
+ await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);await page.mouse.down();await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2+55,{steps:6});await page.mouse.up();
+ const afterDrag=(await projects.boundingBox()).height;
+ assert.ok(afterDrag>before+45,'Dragging the divider gives more height to Projects');
+ await divider.focus();await page.keyboard.press('ArrowUp');
+ const afterKey=(await projects.boundingBox()).height;
+ assert.ok(afterKey<afterDrag-5,'ArrowUp reduces the Projects section height');
+ await page.reload();
+ const persisted=(await page.locator('#projects-section').boundingBox()).height;
+ assert.ok(Math.abs(persisted-afterKey)<2,'Rail split survives renderer reload');
+ await page.getByRole('button',{name:'Toggle project list'}).click();
+ await page.getByRole('button',{name:'Toggle recent conversations'}).click();
+ assert.equal(await page.locator('#projects').isVisible(),false);
+ assert.equal(await page.locator('#recent-content').isVisible(),false);
+ await page.getByRole('button',{name:'Toggle project list'}).click();
+ await page.getByRole('button',{name:'Toggle recent conversations'}).click();
+ assert.equal(await page.locator('#projects').isVisible(),true);
+ assert.equal(await page.locator('#recent-content').isVisible(),true);
+
+ const preferredHeight=(await page.locator('#projects-section').boundingBox()).height;
+ await page.getByRole('button',{name:'Collapse projects sidebar'}).click();
+ await page.getByRole('button',{name:'Collapse conversations sidebar'}).click();
+ const brand=page.locator('.brand'),restore=page.getByRole('button',{name:'Show projects sidebar'});
+ assert.ok((await restore.boundingBox()).x>(await brand.boundingBox()).x+(await brand.boundingBox()).width,'Collapsed rail restore control sits beside brand');
+ assert.ok((await restore.boundingBox()).x+(await restore.boundingBox()).width<(await page.locator('.titlebar-spacer').boundingBox()).x,'Restore control precedes titlebar spacer');
+ const conversationRestore=page.getByRole('button',{name:'Show conversations sidebar'});
+ assert.ok((await conversationRestore.boundingBox()).x+(await conversationRestore.boundingBox()).width<(await page.locator('.titlebar-spacer').boundingBox()).x,'Both restore controls precede titlebar spacer');
+ await page.reload();
+ await page.getByRole('button',{name:'Show projects sidebar'}).waitFor();
+ const restoreAfterReload=page.getByRole('button',{name:'Show projects sidebar'}),conversationRestoreAfterReload=page.getByRole('button',{name:'Show conversations sidebar'});
+ assert.ok((await restoreAfterReload.boundingBox()).x+(await restoreAfterReload.boundingBox()).width<(await page.locator('.titlebar-spacer').boundingBox()).x,'Restore placement survives reload while both sidebars are hidden');
+ await restoreAfterReload.click();
+ await conversationRestoreAfterReload.click();
+ assert.equal(await page.locator('#project-sidebar').isVisible(),true);
+ assert.equal(await page.locator('#conversation-sidebar').isVisible(),true);
+ assert.ok(Math.abs((await page.locator('#projects-section').boundingBox()).height-preferredHeight)<2,'Hidden rail reload preserves its preferred section size');
+ const railBox=await page.locator('#project-sidebar').boundingBox(),addBox=await page.locator('#add-project').boundingBox();
+ assert.ok(Math.abs((railBox.y+railBox.height)-(addBox.y+addBox.height))<10,'Add project footer remains at the bottom of its rail');
+ assert.equal(await page.locator('[data-project-id="'+p.id+'"]').evaluate(el=>getComputedStyle(el).cursor),'pointer','Project rows use a normal hover cursor');
+
+ const session=await page.evaluate(id=>window.luce.createTerminal({projectId:id,provider:'codex'}),p.id);
+ await until(()=>page.evaluate(async id=>(await window.luce.getTerminal(id)).buffer.includes('FIXTURE_READY'),session.id));
+ const pane=page.locator('.terminal-pane[data-session-id="'+session.id+'"]');
+ await pane.locator('.pane-usage').click();
+ const dialog=page.locator('#modal');
+ await dialog.waitFor({state:'visible'});
+ assert.equal(await dialog.locator('.compact-quota').count(),2,'Usage modal shows both provider quota windows');
+ assert.match(await dialog.textContent(),/30% left/);
+ assert.match(await dialog.textContent(),/Resets/);
+ assert.match(await dialog.textContent(),/Updated/);
+ assert.match(await dialog.textContent(),/shared across its conversations/);
+ assert.equal(await dialog.locator('progress').count(),2);
+ await dialog.getByRole('button',{name:'Refresh usage'}).click();
+ await until(()=>dialog.locator('.usage-stale').count().then(count=>count===1));
+ assert.equal(await dialog.locator('.compact-quota').count(),2,'Refresh preserves both live quota windows');
+ assert.match(await dialog.textContent(),/stale/i,'A failed refresh keeps the cached quota marked stale');
+ await mkdir('artifacts',{recursive:true});
+ await page.screenshot({path:'artifacts/sidebar-usage-dialog.png'});
+ await page.getByRole('button',{name:'Close dialog'}).click();
+ assert.deepEqual(await page.evaluate(async()=>{const usage=(await window.luce.getState()).accounts[0].usage;return {usage:usage.windows.map(w=>w.usedPercent),stale:usage.stale,p:(await window.luce.getState()).projects[0].id};}),{usage:[70,55],stale:true,p:p.id});
+ console.log('PASS: persistent rail split, keyboard sizing, section collapse, restore placement, project cursor, and live provider quota/reset/staleness UI');
+}finally{if(app)await app.close();await rm(root,{recursive:true,force:true});}

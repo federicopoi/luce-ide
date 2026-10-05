@@ -10,7 +10,8 @@ async function resolveEnvironment(){
  try{for(const version of fs.readdirSync(path.join(home,'.nvm/versions/node')).sort().reverse())extra.push(path.join(home,'.nvm/versions/node',version,'bin'));}catch{}
  env.PATH=[...new Set([...(env.PATH||'').split(':'),...extra])].filter(Boolean).join(':');delete env.ELECTRON_RUN_AS_NODE;
  env.TERM='xterm-256color';env.COLORTERM='truecolor';env.TERM_PROGRAM='Luce';env.TERM_PROGRAM_VERSION='0.1.0';
- const executables={};for(const command of ['codex','claude'])for(const directory of env.PATH.split(':')){const file=path.join(directory,command);try{fs.accessSync(file,fs.constants.X_OK);executables[command]=file;break;}catch{}}
+ const executables={};for(const command of ['codex','claude','gh'])for(const directory of env.PATH.split(':')){const file=path.join(directory,command);try{fs.accessSync(file,fs.constants.X_OK);executables[command]=file;break;}catch{}}
+ for(const [provider,key]of [['codex','LUCE_CODEX_EXECUTABLE'],['claude','LUCE_CLAUDE_EXECUTABLE'],['gh','LUCE_GH_EXECUTABLE']])if(process.env[key]){const file=process.env[key];if(!path.isAbsolute(file))throw Error(`${key} must be an absolute executable path.`);fs.accessSync(file,fs.constants.X_OK);executables[provider]=file;}
  return {env,shell,executables};
 }
 module.exports={resolveEnvironment};

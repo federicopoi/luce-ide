@@ -1,0 +1,10 @@
+const fs=require('node:fs');const path=require('node:path');
+function record(s){if(!s||s.status&&s.status!=='running'||!['codex','claude','shell'].includes(s.provider)||typeof s.id!=='string'||!s.id||s.id.length>128||typeof s.projectId!=='string'||s.projectId.length>128)return null;const row={conversationPending:s.conversationPending===true,id:s.id,projectId:s.projectId,provider:s.provider};for(const [key,max]of [['conversationId',200],['accountId',128],['githubAccountId',128],['title',200],['workingDirectory',4096],['previewURL',4096]])if(typeof s[key]==='string'&&s[key].length<=max)row[key]=s[key];return row;}
+class WorkspaceResume{
+ constructor(directory){this.file=path.join(directory,'open-workspace.json');this.pending=[];this.failedSessions=[];this.failures=[];try{const saved=JSON.parse(fs.readFileSync(this.file,'utf8'));if(Array.isArray(saved.sessions))this.pending=saved.sessions.slice(0,256).map(record).filter(Boolean);}catch{}}
+ save(sessions,{includePending=false}={}){const data={version:1,sessions:[...sessions,...(includePending?this.pending:this.failedSessions).filter(f=>!sessions.some(s=>s.id===f.id||s.restoredFromId===f.id||s.provider===f.provider&&s.conversationId&&s.conversationId===f.conversationId&&(s.provider!=='codex'||s.accountId===f.accountId)))].slice(0,256).map(record).filter(Boolean)};fs.mkdirSync(path.dirname(this.file),{recursive:true});const temp=this.file+'.tmp';fs.writeFileSync(temp,JSON.stringify(data),{mode:0o600});fs.renameSync(temp,this.file);}
+ dismiss(id){this.pending=this.pending.filter(s=>s.id!==id);this.failedSessions=this.failedSessions.filter(s=>s.id!==id);this.failures=this.failures.filter(s=>s.id!==id);}
+ async restore(create,{cancelled=()=>false}={}){const failures=[],remaining=[];for(const item of this.pending){if(cancelled()){remaining.push(item);continue;}try{await create(item);}catch(error){remaining.push(item);failures.push({id:item.id,projectId:item.projectId,provider:item.provider,title:item.title||item.provider,message:error.message});}}this.pending=remaining;this.failedSessions=remaining;this.failures=failures;return failures;}
+
+}
+module.exports={WorkspaceResume};

@@ -1,0 +1,5 @@
+{
+  "name": "luce-relay-worker",
+  "private": true,
+  "type": "module"
+}
