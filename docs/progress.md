@@ -172,3 +172,13 @@ Added Accounts → GitHub device sign-in, editable commit identities and persist
 Website/file previews now keep the source terminal live in a resizable left column, temporarily replacing navigation. Back restores pane arrangement and sidebar preferences; full preview and no-source modes work. File-link async source identity is retained. Project/file trees have softer selection, consistent outlines, SVG chevrons and indentation guides.
 
 Verified 124 unit/integration tests, general app/Codex account/files-media/current-cwd/drag/links/GitHub-profile-relaunch/Codex-continuation/preview-context smokes. Packaged preview-context and GitHub account smokes also passed. Reviewed; material findings fixed with regressions and rechecked. Installed in ~/Applications/Luce.app; prior bundle preserved as Luce-backup-1791167090416.app. Running user sessions were left open; quit/reopen loads the update. Real GitHub sign-in is a user action.
+
+
+### Mobile desktop-design alignment — 2026-10-04
+
+- Matched the desktop dark surfaces, neutral focus/selection styling, yellow Luce center, provider marks, conversation rows, New provider choices, Accounts, Settings, dialogs, and composer.
+- Added a persisted project list/tabs switch beside the heading. Tabs show only the chosen project's conversations; original collapsed-project preferences and per-conversation drafts remain intact. Keyboard focus survives tab activation and state refresh.
+- Phone website previews hide global navigation, expand using CSS instead of unsupported browser fullscreen APIs, and keep advanced typing/key controls in a disclosure. Wide screens keep the source conversation beside the preview; expanded mode uses the entire workspace. Back restores navigation.
+- Corrected preview image positioning so letterboxing and normalized taps remain accurate in the flexible layout. Also fixed explicit ZDOTDIR selection when the browser helper inherits a parent Luce shell environment.
+- Verification: 126 unit tests; extended mobile fixture across 320/390/768/1024px; pre-deployment live-relay test with local mobile assets; packaged Mac against deployed phone UI. Real PTY Send/Enter, exact Claude/Codex approvals, browser text/keys/scroll/navigation, native Mac preview isolation, creation, pairing and revocation passed. Review findings resolved.
+- Published existing Worker version `085b6835-1f5f-4355-af96-ed124e0d8abd`. Hosted HTML, CSS, JS, manifest and service-worker hashes match the build. Installed companion Mac archive matches the signed package; previous app preserved. User sessions left running. Phone refresh/reopen loads the new shell; pairing data is preserved.

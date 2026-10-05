@@ -1,3 +1,5 @@
+import codexMark from '../../assets/providers/codex.svg';
+import claudeMark from '../../assets/providers/claude.svg';
 import { PhoneConnection } from '../shared/remote-protocol.mjs';
 import {sessionStatus,projectActivity} from '../shared/session-status.mjs';
 import { Terminal } from '@xterm/xterm';
@@ -7,6 +9,12 @@ const $ = selector => document.querySelector(selector);
 const views = ['projects', 'live', 'terminal', 'preview', 'create', 'accounts', 'settings'];
 const storageKey = 'luce.remote.device.v1';
 const state = { projects: [], terminals: [], accounts: [], approvals: [] };
+let projectView='sidebar',selectedProjectId=null;try{projectView=localStorage.getItem('luce.remote.project-view')==='tabs'?'tabs':'sidebar';selectedProjectId=localStorage.getItem('luce.remote.selected-project');}catch{}
+const providerNames={codex:'Codex',claude:'Claude Code',shell:'Terminal'};
+const providerMark=provider=>({codex:codexMark,claude:claudeMark}[provider]||'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7 9 3 3-3 3m6 0h4"/></svg>');
+const projectViewMark=view=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="3"/>'+ (view==='tabs'?'<path d="M9 4v16"/>':'<path d="M3 10h18M9 4v6M15 4v6"/>')+'</svg>';
+function selectProject(id){selectedProjectId=id;try{localStorage.setItem('luce.remote.selected-project',id);}catch{}renderProjects();}
+
 let remoteCapabilities = null;
 let connectionReady=false;let liveFilter='open';let renameTargetId=null;let collapsedProjects=new Set();try{collapsedProjects=new Set(JSON.parse(localStorage.getItem('luce.remote.collapsed-projects')||'[]'));}catch{}
 let connection = null;
@@ -100,7 +108,7 @@ function applyState(value) {
 function navigate(view) {
   if (!views.includes(view)) return;
   if(view==='terminal'&&!terminal())view='live';
-  currentView = view;
+  currentView = view;document.body.classList.toggle('preview-mode',view==='preview');document.body.classList.remove('preview-expanded');$('#fullscreen-button').setAttribute('aria-pressed','false');$('#fullscreen-button').textContent='Full screen';if(view==='preview'){$('#preview-tools').open=false;$('#preview-project').textContent=projectName(terminal()?.projectId);}
   for (const name of views) $(`#${name}-view`).hidden = name !== view;
   $('#pair-screen').hidden = true;
   $('#tabbar').hidden = false;
@@ -110,7 +118,7 @@ function navigate(view) {
 }
 
 function showUnpaired() {
-  $('#pair-screen').hidden = false; $('#tabbar').hidden = true;
+  document.body.classList.remove('preview-mode','preview-expanded');$('#pair-screen').hidden = false; $('#tabbar').hidden = true;
   for (const view of views) $(`#${view}-view`).hidden = true;
   $('#connection-label').textContent = 'Not paired';
   $('#connection-dot').className = 'dot offline';
@@ -251,18 +259,50 @@ function recoverTerminalGap(forceSnapshot = false) {
 function formatSize(bytes){if(!Number.isFinite(bytes))return '';return bytes<1048576?`${Math.max(1,Math.round(bytes/1024))} KB`:`${(bytes/1048576).toFixed(1)} MB`;}
 function activityBadges(item){const n=projectActivity(item.id,state.terminals,state.approvals),alerts=n.attention+n.finished;return `${n.working?`<span class="status-dot status-working" role="img" aria-label="${n.working} working" title="${n.working} working">${n.working>1?`<small>${n.working}</small>`:''}</span>`:''}${alerts?`<span class="status-dot status-attention" role="img" aria-label="${n.attention} need input, ${n.finished} finished" title="${n.attention} need input, ${n.finished} finished">${alerts>1?`<small>${alerts}</small>`:''}</span>`:''}<span class="open-count" title="${n.open} open terminals">${n.open}</span>`;}
 function matchesSession(s,query){return `${s.title||''} ${projectName(s.projectId)} ${s.provider||''} ${accountName(s.accountId)}`.toLowerCase().includes(query);}
-function sessionRow(session,showProject=false){const row=document.createElement('button');row.type='button';row.className='session-row';row.dataset.terminalId=session.id;const title=document.createElement('strong');title.textContent=safeText(session.title,'Terminal');const meta=document.createElement('small');meta.className='session-meta';const status=sessionStatus(session,state.approvals);const phase=document.createElement('span');phase.className=`session-phase phase-${status.key}`;phase.textContent=status.label;const detail=document.createElement('span');detail.textContent=[showProject?projectName(session.projectId):'',session.provider==='codex'?accountName(session.accountId):safeText(session.provider,'shell'),formatSize(session.diskBytes)].filter(Boolean).join(' · ');meta.append(phase,detail);row.append(title,meta);row.onclick=()=>openTerminal(session.id);return row;}
-function renderProjects(){const root=$('#project-list');root.replaceChildren();$('#project-count').textContent=String(state.projects.length);const query=$('#project-search').value.trim().toLowerCase();let shown=0;for(const item of state.projects){const all=state.terminals.filter(t=>t.projectId===item.id),projectMatches=`${item.name} ${item.directory||item.path||''}`.toLowerCase().includes(query),items=all.filter(s=>projectMatches||matchesSession(s,query));if(!projectMatches&&!items.length)continue;shown++;const card=document.createElement('article');card.className='project-group';const button=document.createElement('button');button.className='project-header';button.type='button';button.dataset.projectId=item.id;button.innerHTML='<span class="project-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H10l2 2h7.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/></svg></span><span class="project-copy"><strong></strong><small></small></span><span class="project-activity"></span><span class="project-chevron" aria-hidden="true">⌄</span>';button.querySelector('strong').textContent=safeText(item.name,'Project');button.querySelector('small').textContent=safeText(item.directory||item.path,'On your Mac');button.querySelector('.project-activity').innerHTML=activityBadges(item);const collapsed=collapsedProjects.has(item.id)&&!query;button.setAttribute('aria-expanded',String(!collapsed));button.onclick=()=>{if(collapsedProjects.has(item.id))collapsedProjects.delete(item.id);else collapsedProjects.add(item.id);localStorage.setItem('luce.remote.collapsed-projects',JSON.stringify([...collapsedProjects]));renderProjects();};card.append(button);const sessions=document.createElement('div');sessions.className='project-terminals';sessions.hidden=collapsed;for(const session of items.filter(s=>s.status!=='exited'))sessions.append(sessionRow(session));const ended=items.filter(s=>s.status==='exited');if(ended.length){const details=document.createElement('details');details.className='ended-sessions';const summary=document.createElement('summary');summary.textContent=`${ended.length} exited terminal${ended.length===1?'':'s'}`;details.append(summary);for(const session of ended)details.append(sessionRow(session));sessions.append(details);}const add=document.createElement('button');add.className='project-new';add.disabled=!connectionReady;add.textContent='+ New terminal';add.onclick=()=>{renderCreate(item.id);navigate('create');};sessions.append(add);card.append(sessions);root.append(card);}if(!shown)root.innerHTML=`<div class="empty-state">${state.projects.length?'No matching projects or conversations.':'Add a project in Luce on your Mac to get started.'}</div>`;}
+function sessionRow(session,showProject=false){const row=document.createElement('button');row.type='button';row.className='session-row';row.dataset.terminalId=session.id;const title=document.createElement('strong');title.textContent=safeText(session.title,'Terminal');const meta=document.createElement('small');meta.className='session-meta';const status=sessionStatus(session,state.approvals);const phase=document.createElement('span');phase.className=`session-phase phase-${status.key}`;phase.textContent=status.label;const detail=document.createElement('span');detail.textContent=[showProject?projectName(session.projectId):'',session.provider==='codex'?accountName(session.accountId):providerNames[session.provider]||'Terminal',formatSize(session.diskBytes)].filter(Boolean).join(' · ');meta.append(phase,detail);const mark=document.createElement('span');mark.className='session-provider-mark';mark.setAttribute('aria-hidden','true');mark.innerHTML=providerMark(session.provider);row.append(mark,title,meta);row.onclick=()=>openTerminal(session.id);return row;}
+function renderProjects(){
+ const root=$('#project-list');root.replaceChildren();
+ if(!project(selectedProjectId))selectedProjectId=state.projects[0]?.id||null;
+ const tabsMode=projectView==='tabs';document.body.classList.toggle('project-tabs-view',tabsMode);
+ $('#project-count').textContent=String(state.projects.length);$('#project-count').hidden=tabsMode;
+ $('#projects-heading').textContent=tabsMode?'Conversations':'Projects';
+ const toggle=$('#mobile-project-view');toggle.innerHTML=projectViewMark(projectView);toggle.setAttribute('aria-pressed',String(tabsMode));toggle.title=tabsMode?'Use project list':'Use project tabs';
+ const tabs=$('#mobile-project-tabs'),restoreTabFocus=tabs.contains(document.activeElement);tabs.hidden=!tabsMode;tabs.replaceChildren();
+ for(const item of state.projects){const tab=document.createElement('button');tab.type='button';tab.setAttribute('role','tab');tab.setAttribute('aria-selected',String(item.id===selectedProjectId));tab.textContent=safeText(item.name,'Project');tab.tabIndex=item.id===selectedProjectId?0:-1;tab.onclick=()=>selectProject(item.id);tab.onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const index=state.projects.findIndex(p=>p.id===item.id),next=state.projects[event.key==='Home'?0:event.key==='End'?state.projects.length-1:(index+(event.key==='ArrowRight'?1:-1)+state.projects.length)%state.projects.length];selectProject(next.id);tabs.querySelector('[aria-selected=true]')?.focus();};tabs.append(tab);}
+ if(restoreTabFocus&&tabsMode)tabs.querySelector('[aria-selected=true]')?.focus({preventScroll:true});
+ $('#project-context').hidden=!tabsMode;$('#project-context').textContent=safeText(project(selectedProjectId)?.directory||project(selectedProjectId)?.path);
+ $('#project-search').placeholder=tabsMode?'Search conversations':'Search projects and conversations';
+ const query=$('#project-search').value.trim().toLowerCase();let shown=0;
+ for(const item of state.projects){
+  if(tabsMode&&item.id!==selectedProjectId)continue;
+  const all=state.terminals.filter(t=>t.projectId===item.id),projectMatches=`${item.name} ${item.directory||item.path||''}`.toLowerCase().includes(query),items=all.filter(s=>projectMatches||matchesSession(s,query));if(!projectMatches&&!items.length)continue;shown++;
+  const card=document.createElement('article');card.className='project-group';
+  const collapsed=!tabsMode&&collapsedProjects.has(item.id)&&!query;
+  if(!tabsMode){
+   const button=document.createElement('button');button.className='project-header';button.type='button';button.dataset.projectId=item.id;
+   button.innerHTML='<span class="project-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H10l2 2h7.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/></svg></span><span class="project-copy"><strong></strong><small></small></span><span class="project-activity"></span><span class="project-chevron" aria-hidden="true">⌄</span>';
+   button.querySelector('strong').textContent=safeText(item.name,'Project');button.querySelector('small').textContent=safeText(item.directory||item.path,'On your Mac');button.querySelector('.project-activity').innerHTML=activityBadges(item);button.setAttribute('aria-expanded',String(!collapsed));
+   button.onclick=()=>{if(collapsedProjects.has(item.id))collapsedProjects.delete(item.id);else collapsedProjects.add(item.id);localStorage.setItem('luce.remote.collapsed-projects',JSON.stringify([...collapsedProjects]));renderProjects();};card.append(button);
+  }
+  const sessions=document.createElement('div');sessions.className='project-terminals';sessions.hidden=collapsed;
+  for(const session of items.filter(s=>s.status!=='exited'))sessions.append(sessionRow(session));
+  const ended=items.filter(s=>s.status==='exited');if(ended.length){const details=document.createElement('details');details.className='ended-sessions';const summary=document.createElement('summary');summary.textContent=`${ended.length} exited terminal${ended.length===1?'':'s'}`;details.append(summary);for(const session of ended)details.append(sessionRow(session));sessions.append(details);}
+  if(!items.length){const empty=document.createElement('p');empty.className='conversation-empty';empty.textContent=query?'No matching conversations.':'Your conversations will appear here.';sessions.append(empty);}
+  const add=document.createElement('button');add.className='project-new';add.disabled=!connectionReady;add.textContent='+ New conversation';add.onclick=()=>{renderCreate(item.id);navigate('create');};sessions.append(add);card.append(sessions);root.append(card);
+ }
+ if(!shown)root.innerHTML=`<div class="empty-state">${state.projects.length?'No matching projects or conversations.':'Add a project in Luce on your Mac to get started.'}</div>`;
+}
+
 function renderLive(){const root=$('#live-list');root.replaceChildren();if(currentView!=='live')return;const counts=state.projects.map(p=>projectActivity(p.id,state.terminals,state.approvals));const sum=key=>counts.reduce((n,c)=>n+c[key],0);$('#live-summary').textContent=`${sum('open')} open · ${sum('working')} working · ${sum('attention')} need input`;const query=$('#live-search').value.trim().toLowerCase();const rows=state.terminals.filter(s=>matchesSession(s,query)&&(liveFilter==='all'||liveFilter==='open'&&s.status==='running'||sessionStatus(s,state.approvals).key===liveFilter));const rank={attention:0,working:1,finished:2,waiting:3,ready:4,exited:5};rows.sort((a,b)=>(rank[sessionStatus(a,state.approvals).key]??6)-(rank[sessionStatus(b,state.approvals).key]??6));for(const s of rows)root.append(sessionRow(s,true));if(!rows.length)root.innerHTML='<div class="empty-state">No terminals in this view. Start one from New or choose another filter.</div>';$('#live-filters').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter===liveFilter)));}
 
-function openTerminal(id) { if (!terminal(id)) return; if (activeTerminalId !== id) {if(activeTerminalId)terminalDrafts.set(activeTerminalId,$('#terminal-message').value);$('#terminal-message').value=terminalDrafts.get(id)||''; terminalOffset = 0; terminalObservedOffset = 0; } activeTerminalId = id; if (xtermSessionId !== id) { xterm?.dispose(); xterm = null; xtermSessionId = null; } renderTerminal(); navigate('terminal'); }
+function openTerminal(id) { if (!terminal(id)) return; if (activeTerminalId !== id) {if(activeTerminalId)terminalDrafts.set(activeTerminalId,$('#terminal-message').value);$('#terminal-message').value=terminalDrafts.get(id)||''; terminalOffset = 0; terminalObservedOffset = 0; } activeTerminalId = id;selectProject(terminal(id).projectId); if (xtermSessionId !== id) { xterm?.dispose(); xterm = null; xtermSessionId = null; } renderTerminal(); navigate('terminal'); }
 
 function renderTerminal() {
   const active = terminal();
   if (!active) return;
   $('#terminal-project').textContent = projectName(active.projectId);
   $('#terminal-title').textContent = safeText(active.title, 'Terminal');
-  $('#terminal-provider').textContent = safeText(active.provider, 'shell');$('#session-compatibility').hidden=remoteCapabilities?.sessionControls===true;
+  $('#terminal-provider').innerHTML=providerMark(active.provider);const providerLabel=document.createElement('span');providerLabel.textContent=providerNames[active.provider]||'Terminal';$('#terminal-provider').append(providerLabel);$('#session-compatibility').hidden=remoteCapabilities?.sessionControls===true;
   const phase=sessionStatus(active,state.approvals);$('#terminal-status').textContent=phase.label;$('#terminal-status').className=`session-phase phase-${phase.key}`;$('#terminal-size').textContent=formatSize(active.diskBytes);const switcher=$('#terminal-switcher');switcher.replaceChildren();for(const p of state.projects){const group=document.createElement('optgroup');group.label=p.name;for(const t of state.terminals.filter(t=>t.projectId===p.id)){const option=document.createElement('option');option.value=t.id;option.textContent=`${t.title||'Terminal'} · ${sessionStatus(t,state.approvals).label}`;group.append(option);}if(group.children.length)switcher.append(group);}switcher.value=active.id;$('#rename-terminal').disabled=!connectionReady||remoteCapabilities?.sessionControls!==true;const auto=$('#terminal-auto');auto.hidden=active.provider==='shell';auto.disabled=!connectionReady||remoteCapabilities?.sessionControls!==true||!active.approvalsCapable||active.status!=='running';auto.setAttribute('aria-checked',String(!!active.autoApprove));auto.classList.toggle('enabled',!!active.autoApprove);auto.title=remoteCapabilities?.sessionControls===true?'Approve permission requests automatically; questions always stay manual':'Restart Luce on your Mac to enable session controls';
   $('#terminal-account').textContent = active.provider === 'codex' ? accountName(active.accountId) : '';
   const exited = active.status === 'exited';const unavailable=active.status!=='running'||!connectionReady;
@@ -328,7 +368,7 @@ function renderCreate(projectId, provider, accountId) {
     const fallbackAccount = [...accountSelect.options].find(option => !option.disabled);
     if (fallbackAccount) accountSelect.value = fallbackAccount.value;
   }
-  $('#account-field').hidden = providerSelect.value !== 'codex';
+  renderCreateProvider();
 }
 
 function renderAccounts() {
@@ -352,7 +392,7 @@ function renderAccounts() {
   }
 }
 
-function renderCreateProvider() { $('#account-field').hidden = $('#create-provider').value !== 'codex'; }
+function renderCreateProvider() { $('#account-field').hidden = $('#create-provider').value !== 'codex';document.querySelectorAll('#create-providers button').forEach(button=>{const selected=button.dataset.provider===$('#create-provider').value;button.setAttribute('aria-checked',String(selected));button.tabIndex=selected?0:-1;}); }
 
 async function confirmed(message, action, label) {
   $('#confirm-copy').textContent = message; $('#confirm-action').textContent = label;
@@ -510,6 +550,9 @@ async function installServiceWorker() {
   try { await navigator.serviceWorker.register('/sw.js', { scope: '/' }); } catch { /* The remote controls work without offline shell caching. */ }
 }
 
+for(const [id,shape] of [['preview-back','<path d="m14 6-6 6 6 6"/>'],['preview-forward','<path d="m10 6 6 6-6 6"/>'],['preview-reload','<path d="M20 9a8 8 0 1 0 0 6M20 3v6h-6"/>']])$('#'+id).innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+shape+'</svg>';
+$('#mobile-project-view').onclick=()=>{projectView=projectView==='tabs'?'sidebar':'tabs';try{localStorage.setItem('luce.remote.project-view',projectView);}catch{}renderProjects();};
+for(const provider of ['codex','claude','shell']){const button=document.createElement('button');button.type='button';button.dataset.provider=provider;button.setAttribute('role','radio');button.innerHTML=providerMark(provider);const label=document.createElement('span');label.textContent=providerNames[provider];button.append(label);button.onclick=()=>{$('#create-provider').value=provider;renderCreateProvider();};button.onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const providers=['codex','claude','shell'],index=providers.indexOf(provider),next=providers[event.key==='Home'?0:event.key==='End'?2:(index+(event.key==='ArrowRight'?1:2))%3];$('#create-provider').value=next;renderCreateProvider();$('#create-providers [data-provider='+next+']').focus();};$('#create-providers').append(button);}
 $('#project-search').addEventListener('input',renderProjects);$('#live-search').addEventListener('input',renderLive);$('#refresh-live').onclick=refreshState;$('#live-filters').onclick=event=>{const b=event.target.closest('[data-filter]');if(b){liveFilter=b.dataset.filter;renderLive();}};$('#terminal-switcher').onchange=event=>openTerminal(event.target.value);$('.brand').onclick=event=>{event.preventDefault();if(storedPairing())navigate('projects');};
 $('#rename-terminal').onclick=()=>{const active=terminal();if(!active)return;renameTargetId=active.id;$('#rename-input').value=active.title||'';$('#rename-dialog').showModal();$('#rename-input').focus();};$('#rename-cancel').onclick=()=>$('#rename-dialog').close();$('#rename-form').onsubmit=async event=>{event.preventDefault();const id=renameTargetId,title=$('#rename-input').value.trim(),button=event.submitter;if(!id||!title)return;if(button)button.disabled=true;try{await request('rename',{id,title});$('#rename-dialog').close();await refreshState();}catch(error){showToast(safeText(error.message));}finally{if(button)button.disabled=false;}};$('#terminal-auto').onclick=async()=>{const active=terminal();if(!active)return;try{await request('autoApprove',{id:active.id,enabled:!active.autoApprove});await refreshState();}catch(error){showToast(safeText(error.message));}};
 $('#composer').addEventListener('submit', event => { event.preventDefault(); sendText($('#terminal-message').value); });
@@ -528,7 +571,7 @@ $('#start-another-terminal').addEventListener('click', () => {
   recoveryDraft={id:active.id,text:$('#terminal-message').value};renderCreate(active.projectId, active.provider, active.accountId);
   navigate('create');
 });
-$('#fullscreen-button').addEventListener('click', async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await $('#preview-view').requestFullscreen(); } catch { showToast('Full screen is unavailable.'); } });
+$('#fullscreen-button').addEventListener('click',()=>{const expanded=document.body.classList.toggle('preview-expanded');$('#fullscreen-button').setAttribute('aria-pressed',String(expanded));$('#fullscreen-button').textContent=expanded?'Restore':'Full screen';invalidatePreviewFrame();refreshPreview();});
 $('#preview-phone-mode').addEventListener('click', () => { if (previewMode === 'phone') return; previewMode = 'phone'; updatePreviewControls(); invalidatePreviewFrame(); refreshPreview(); });
 $('#preview-desktop-mode').addEventListener('click', () => { if (previewMode === 'desktop') return; previewMode = 'desktop'; updatePreviewControls(); invalidatePreviewFrame(); refreshPreview(); });
 $('#preview-back').addEventListener('click', () => previewInput({ type: 'navigate', action: 'back' }));

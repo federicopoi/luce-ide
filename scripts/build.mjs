@@ -6,7 +6,7 @@ await build({entryPoints:['src/renderer/app.js'],bundle:true,outfile:'dist/app.j
 await copyFile('src/renderer/index.html','dist/index.html');await copyFile('src/renderer/styles.css','dist/styles.css');
 await copyFile('src/renderer/theme.css','dist/theme.css');
 await mkdir('dist/mobile',{recursive:true});
-await build({entryPoints:['src/mobile/mobile.js'],bundle:true,outfile:'dist/mobile/mobile.js',platform:'browser',format:'iife',target:['safari16.4','chrome120'],minify:true});
+await build({entryPoints:['src/mobile/mobile.js'],bundle:true,outfile:'dist/mobile/mobile.js',platform:'browser',format:'iife',target:['safari16.4','chrome120'],minify:true,loader:{'.svg':'text'}});
 for(const file of ['index.html','styles.css','sw.js','manifest.webmanifest'])await copyFile(`src/mobile/${file}`,`dist/mobile/${file}`);
 await copyFile('assets/luce-mark.svg','dist/mobile/luce-mark.svg');
 for(const size of [256,512])await copyFile(`assets/Luce.iconset/icon_${size}x${size}.png`,`dist/mobile/icon-${size}.png`);
