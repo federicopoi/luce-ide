@@ -19,8 +19,12 @@ try{
  assert.ok(Math.abs(a.x-b.x)<40&&b.x+b.width<=a.x+a.width+1,'Projects and conversations share a single navigation column');
  assert.equal(await page.locator('#terminal-workspace .welcome').count(),1,'Empty project has one start view');
  assert.equal(await page.locator('#terminal-workspace .pane-empty').count(),0);
+ await page.getByRole('textbox',{name:'Search conversations',exact:true}).focus();
  await page.screenshot({path:'artifacts/redesign-empty.png'});
- const s=await page.evaluate(id=>window.luce.createTerminal({projectId:id,provider:'shell',title:'Build landing page'}),p.id);
+ await page.locator('.provider-choices [data-provider="shell"]').click();
+ await until(()=>page.evaluate(async()=>(await window.luce.getState()).terminals.length===1));
+ const s=(await page.evaluate(()=>window.luce.getState())).terminals[0];
+ await page.evaluate(id=>window.luce.renameTerminal(id,'Build landing page'),s.id);
  await page.locator(`[data-session-id="${s.id}"] .xterm`).waitFor();
  const q=await page.evaluate(dir=>window.luce.addProject(dir),other);
  await page.locator(`.project-item[data-project-id="${p.id}"]`).click();
