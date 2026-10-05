@@ -202,3 +202,9 @@ Verified 124 unit/integration tests, general app/Codex account/files-media/curre
 
 - Project rows and tabs show one small status dot above the open-terminal count. Yellow covers work or required attention, green covers pending completion, and idle projects have no dot. Work/response subcounts and separate adjacent indicators are removed; detailed activity remains in accessible labels and tooltips.
 - Verified activity transitions, mixed working/completed agents, unchanged open counts, acknowledgments, sound/Auto behavior, reload persistence and project tabs using isolated completion and tabs fixtures. Built and signed the Mac app.
+
+### Conversation timestamps and quiet restoration — 2026-10-05
+
+- Open and saved conversation rows show a relative timestamp below the title, alongside the provider/account. Saved history uses its update time; unmatched open terminals use their creation time. Labels refresh each minute without rebuilding rows or stealing focus.
+- Removed automatic restore-failure sidebar banners and the startup toast. Failure records and saved conversations remain intact for future restore/resume; application startup errors and explicit-action errors still report their failures.
+- Verification: 128 unit tests, isolated saved/live timestamp fixture with a real failed restore, unified navigation, global recents and real shell/Codex/Claude quit/relaunch checks. Built and signed the Mac app. Folder-access policy remains pending clarification; current ad-hoc signing changes its designated identity across builds and may cause renewed macOS privacy prompts after updates.

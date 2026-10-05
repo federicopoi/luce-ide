@@ -51,12 +51,13 @@ svg{stroke-width:1.5}
 .conversation-lists{margin:0;overflow:visible;flex:none}
 .section-label{font-size:10px;letter-spacing:0;font-weight:400;color:#808080;margin:9px 10px 3px}
 .section-label .count{color:#707070;font-size:10px}
-.session-row{border:0;border-radius:7px;margin:1px 0;padding:8px 10px;height:34px;min-height:34px;gap:6px;color:#c3c3c3}
+.session-row{display:grid;grid-template-columns:minmax(0,1fr) auto;border:0;border-radius:7px;margin:1px 0;padding:8px 10px;height:auto;min-height:48px;column-gap:8px;row-gap:3px;color:#c3c3c3}
 .session-row.selected{background:#ffffff09;color:#ededed}
-.session-text,.history-title{font-size:12px;letter-spacing:0;font-weight:400}
-.session-row .provider-tag{font-size:10px;color:#808080;opacity:0;transition:opacity .12s}
+.session-text,.history-title{grid-column:1/-1;font-size:12px;letter-spacing:0;font-weight:400}
+.session-row .provider-tag{grid-column:1;grid-row:2;justify-self:start;font-size:10px;color:#808080;opacity:.8;transition:opacity .12s}
 .session-row:hover .provider-tag,.session-row.selected .provider-tag{opacity:1}
-.history-provider{display:inline;font-size:10px;color:#777;max-width:70px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.history-row time{display:none}
+.history-provider{grid-column:1;grid-row:2;display:inline;font-size:10px;color:#858585;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.session-row .conversation-time{grid-column:2;grid-row:2;display:block;width:auto;white-space:nowrap;text-align:right;font-size:10px;line-height:14px;color:#858585;font-variant-numeric:tabular-nums}
 .history-section{margin:12px 0 0}
 .empty-list{color:#777;font-size:11px;line-height:1.65;padding:5px 10px}
 .empty-list button{color:#aaa;font-size:11px}
