@@ -547,7 +547,7 @@ function homeInstructions() {
 
 async function installServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
-  try { await navigator.serviceWorker.register('/sw.js', { scope: '/' }); } catch { /* The remote controls work without offline shell caching. */ }
+  try { const registration=await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache:'none' });await registration.update(); } catch { /* The remote controls work without a service worker. */ }
 }
 
 for(const [id,shape] of [['preview-back','<path d="m14 6-6 6 6 6"/>'],['preview-forward','<path d="m10 6 6 6-6 6"/>'],['preview-reload','<path d="M20 9a8 8 0 1 0 0 6M20 3v6h-6"/>']])$('#'+id).innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+shape+'</svg>';

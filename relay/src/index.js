@@ -26,7 +26,13 @@ export default {
     return json({error:'Not found.'},404);
    }catch(error){return json({error:String(error?.message||'Request failed.').slice(0,200)},400);}
   }
-  return env.ASSETS.fetch(request);
+  // Always return the current deployment; conditional browser requests must not
+  // reuse an older shell. The asset binding resolves immutable deployed bytes.
+  const headers=new Headers(request.headers);headers.delete('if-none-match');headers.delete('if-modified-since');
+  const asset=await env.ASSETS.fetch(new Request(request,{headers}));
+  const response=new Response(asset.body,asset);response.headers.set('cache-control','no-store');response.headers.set('cdn-cache-control','no-store');response.headers.set('cloudflare-cdn-cache-control','no-store');
+  for(const name of ['etag','last-modified','expires','cf-cache-status','age'])response.headers.delete(name);
+  return response;
  }
 };
 

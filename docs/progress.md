@@ -182,3 +182,10 @@ Verified 124 unit/integration tests, general app/Codex account/files-media/curre
 - Corrected preview image positioning so letterboxing and normalized taps remain accurate in the flexible layout. Also fixed explicit ZDOTDIR selection when the browser helper inherits a parent Luce shell environment.
 - Verification: 126 unit tests; extended mobile fixture across 320/390/768/1024px; pre-deployment live-relay test with local mobile assets; packaged Mac against deployed phone UI. Real PTY Send/Enter, exact Claude/Codex approvals, browser text/keys/scroll/navigation, native Mac preview isolation, creation, pairing and revocation passed. Review findings resolved.
 - Published existing Worker version `085b6835-1f5f-4355-af96-ed124e0d8abd`. Hosted HTML, CSS, JS, manifest and service-worker hashes match the build. Installed companion Mac archive matches the signed package; previous app preserved. User sessions left running. Phone refresh/reopen loads the new shell; pairing data is preserved.
+
+
+### Fresh mobile design delivery — 2026-10-05
+
+- Removed the service-worker shell cache and cache-first reads. Activation clears only old Luce design caches; pairing storage and push subscriptions remain intact. Asset requests use network-only `no-store`, and worker registration bypasses HTTP cache when checking updates.
+- Cloudflare runs the Worker before assets. Static responses send browser/CDN no-store headers and remove validators; conditional requests return current deployed bytes rather than reusing an old shell. API and websocket routing is preserved.
+- Verification: 128 unit tests; mobile UI fixture; local Cloudflare relay smoke including no-store HTML/CSS/JS/SW checks; reviewed changes. Deployed version `36cc9191-0e56-4f95-a293-f5ff0164f3cf`; live asset responses verified no-store, HTTP 200 despite old validators, and no ETag.
