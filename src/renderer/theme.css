@@ -1,7 +1,7 @@
 /* Desktop design system. Layout mechanics stay in styles.css. */
 :root{--canvas:#181818;--surface:#202020;--raised:#292929;--hover:#ffffff08;--selected:#ffffff0d;--text:#ededed;--muted:#939393;--border:#ffffff0d;--mint:#dedede;--accent:#dedede;--panel:var(--surface);color:var(--text);background:var(--surface);font-size:13px}
 [hidden]{display:none!important}
-body{background:var(--surface)}
+body{background:var(--surface);height:100vh;overflow:clip}
 button{transition:background .12s ease,color .12s ease}
 button:hover{background:var(--hover)}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #8a8a8a;outline-offset:2px}
@@ -212,10 +212,17 @@ dialog::backdrop{background:#0008;backdrop-filter:blur(3px)}
 .project-tabs-view #project-sidebar{display:flex!important}
 .project-tabs-view #navigation-fallback{order:0}
 .project-tabs-view .conversation-sidebar{padding-left:0}
-.project-tabs-view #recent-section{margin-top:20px;flex:none!important}
+.project-tabs-view #recent-section,.project-tabs-view #add-project{display:none!important}
 .projects-collapsed #project-sidebar,.projects-collapsed #project-resizer{display:none!important}
 .projects-collapsed .workspace{border-radius:12px}
 .conversations-collapsed .conversation-sidebar{display:none!important}
 .preview-stage #project-sidebar{display:none!important}
 @media(max-width:1100px){.project-path{max-width:240px}.project-github{max-width:170px}.pane-header{gap:4px;padding:0 10px}.terminal-body{padding-left:12px}.pane-usage{max-width:95px;overflow:hidden;text-overflow:ellipsis}.welcome h2{font-size:25px}.start-card-actions{flex-wrap:wrap;gap:12px}.utility-rail .search-shortcut{display:flex}}
 @media(prefers-reduced-motion:reduce){button,.file-chevron svg{transition:none}}
+
+.navigation-actions{display:flex;align-items:center;gap:3px}
+.navigation-actions #project-view-button{width:28px;height:28px}
+.navigation-actions #project-view-button svg{width:18px;height:18px}
+.utility-rail #browse-files{margin:0}
+
+.preview-stage .app-layout{height:calc(100vh - 44px)}

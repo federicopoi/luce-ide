@@ -8,11 +8,11 @@ class Preview {
   this.projectId=projectId;this.url='';this.status='idle';
   this.view=new WebContentsView({webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false,partition:`persist:orbit-preview-${projectId}`}});
   const contents=this.view.webContents;contents.session.setPermissionRequestHandler((_w,_p,callback)=>callback(false));contents.session.setPermissionCheckHandler(()=>false);
-  contents.setWindowOpenHandler(()=>({action:'deny'}));
+  contents.setWindowOpenHandler(({url})=>{let destination;try{destination=previewURL(url);}catch{return {action:'deny'};}queueMicrotask(()=>{if(contents.isDestroyed()||this.view?.webContents!==contents||!this.attached)return;this.url=destination;contents.loadURL(destination).catch(()=>{});});return {action:'deny'};});
   for(const event of ['will-navigate','will-frame-navigate','will-redirect'])contents.on(event,(e,url)=>{try{previewURL(typeof url==='string'?url:e.url);}catch{e.preventDefault();}});
   const notify=event=>this.onEvent({...event,projectId});
   contents.on('did-start-loading',()=>{this.status='loading';notify({status:'loading'});});
-  contents.on('did-stop-loading',()=>{if(this.status==='error')return;this.status='ready';notify({status:'ready',url:contents.getURL()});});
+  contents.on('did-stop-loading',()=>{if(this.status==='error')return;this.status='ready';this.url=contents.getURL();notify({status:'ready',url:this.url});});
   contents.on('did-fail-load',(_e,code,description,url,isMainFrame)=>{if(isMainFrame&&code!==-3){this.status='error';notify({status:'error',url,message:`Could not load this page. Make sure your dev server is running. (${description})`});}});
  }
  async show({projectId,url,bounds},force=false){const valid=previewURL(url);this.ensure(projectId);this.setBounds(bounds);if(!this.attached){this.window.contentView.addChildView(this.view);this.attached=true;}if(force||this.url!==valid||this.status==='error'){this.url=valid;this.status='loading';try{await this.view.webContents.loadURL(valid);}catch{this.status='error';}}return {url:valid};}
