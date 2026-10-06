@@ -189,7 +189,7 @@ class RemotePreview {
     if (type === 'navigate') {
       if (params.action === 'back' && contents.canGoBack()) contents.goBack();
       else if (params.action === 'forward' && contents.canGoForward()) contents.goForward();
-      else if (params.action === 'reload') contents.reload();
+      else if (params.action === 'reload') contents.reloadIgnoringCache();
       return true;
     }
 

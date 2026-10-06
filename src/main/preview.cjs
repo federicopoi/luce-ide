@@ -15,10 +15,10 @@ class Preview {
   contents.on('did-stop-loading',()=>{if(this.status==='error')return;this.status='ready';this.url=contents.getURL();notify({status:'ready',url:this.url});});
   contents.on('did-fail-load',(_e,code,description,url,isMainFrame)=>{if(isMainFrame&&code!==-3){this.status='error';notify({status:'error',url,message:`Could not load this page. Make sure your dev server is running. (${description})`});}});
  }
- async show({projectId,url,bounds},force=false){const valid=previewURL(url);this.ensure(projectId);this.setBounds(bounds);if(!this.attached){this.window.contentView.addChildView(this.view);this.attached=true;}if(force||this.url!==valid||this.status==='error'){this.url=valid;this.status='loading';try{await this.view.webContents.loadURL(valid);}catch{this.status='error';}}return {url:valid};}
+ async show({projectId,url,bounds},force=false){const valid=previewURL(url);this.ensure(projectId);this.setBounds(bounds);if(!this.attached){this.window.contentView.addChildView(this.view);this.attached=true;}if(force||this.url!==valid||this.status==='error'){this.url=valid;this.status='loading';try{if(force)this.view.webContents.reloadIgnoringCache();else await this.view.webContents.loadURL(valid);}catch{this.status='error';}}return {url:valid};}
  setBounds(bounds){if(!this.view)return;const size=this.window.getContentBounds();let {x,y,width,height}=bounds||{};if(![x,y,width,height].every(Number.isFinite))throw Error('Invalid preview bounds.');x=Math.max(0,Math.min(Math.round(x),size.width));y=Math.max(0,Math.min(Math.round(y),size.height));width=Math.max(0,Math.min(Math.round(width),size.width-x));height=Math.max(0,Math.min(Math.round(height),size.height-y));this.lastBounds={x,y,width,height};this.view.setBounds(this.lastBounds);}
  hide(){if(this.attached&&this.view&&!this.window.isDestroyed()){this.window.contentView.removeChildView(this.view);this.attached=false;}}
- reload(){if(this.view&&this.url)return this.show({projectId:this.projectId,url:this.url,bounds:this.lastBounds},true);}
+ reload(){if(this.view&&this.url)return this.show({projectId:this.projectId,url:this.status==='error'?this.url:this.view.webContents.getURL()||this.url,bounds:this.lastBounds},true);}
  destroy(){this.hide();if(this.view&&!this.view.webContents.isDestroyed())this.view.webContents.close();this.view=null;}
 }
 module.exports={Preview};
