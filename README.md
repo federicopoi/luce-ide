@@ -2,6 +2,34 @@
 
 A local Mac workspace for project terminals, Claude Code and Codex conversations, and website previews.
 
+Luce is an independent project for Apple Silicon Macs, licensed under [MIT](LICENSE).
+Codex, Claude Code and GitHub accounts belong to each user; Luce does not include
+provider accounts, subscriptions or credentials. Claude currently uses its
+existing local login; separate account profiles are available for Codex and GitHub.
+
+Build from source with Node.js 24:
+
+```sh
+git clone https://github.com/federicopoi/luce-ide.git
+cd luce-ide
+npm ci
+npm test
+npm start
+```
+
+Install the provider CLIs you intend to use separately and authenticate with
+your own accounts. Missing providers are unavailable in the launcher; a project
+shell remains available. Start by adding a folder, then use **Accounts** to add
+Codex or GitHub profiles. Existing CLI logins remain available as the default.
+
+See [build and signing options](docs/building.md),
+[optional self-hosted phone access](docs/remote-self-hosting.md),
+[security and local data](SECURITY.md), and [contributing](CONTRIBUTING.md).
+Public download releases still require a verified Developer ID signed and
+notarized artifact; a local developer build does not establish that readiness.
+Third-party licenses and provider marks are described in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
 Drag a project row above or below another project to change its order. The drop line marks the position, and the order is saved across restarts.
 
 Agent terminal headers have an **Auto** switch. It starts off in each new terminal. Enable it to accept waiting and future permission requests in that terminal; disable it to return to manual approvals. It uses the agent approval handler, never types answers into terminal input, and does not answer ordinary agent questions. Closing the terminal or restarting Luce resets Auto to off.
@@ -37,7 +65,7 @@ New Codex conversations launch the normal CLI. They appear in saved history once
 
 Closing the window hides Luce and leaves its terminals running; reopen it from the Dock. Quit stops Luce-owned processes and asks for confirmation. After restarting the app, project preferences and saved agent conversations remain; arbitrary shell processes do not restart automatically.
 
-The rename preserves the original workspace profile at `~/Library/Application Support/Orbit`, including sidebar preferences and preview sessions. Source is available at `~/luce`, an alias of the existing `~/orbit` folder.
+The rename preserves the original workspace profile at `~/Library/Application Support/Orbit`, including sidebar preferences and preview sessions.
 
 ## Local data and current boundaries
 
@@ -50,7 +78,7 @@ This is an Apple Silicon personal build with a persistent local signing certific
 ## Develop and rebuild
 
 ```sh
-cd ~/luce
+cd luce-ide
 npm ci
 npm test
 npm start
@@ -123,7 +151,7 @@ Send submits terminal text followed by Enter. The separate Enter button submits 
 
 Keep Luce open, the Mac online, and the lid open. **Keep Mac awake** prevents idle system sleep while remote access is enabled; it cannot keep an offline or powered-off Mac accessible. Push notifications are opt-in with generic messages that omit conversation content. On iPhone, install the home-screen app to enable supported web push; delivery depends on the browser/OS and Mac connectivity.
 
-The deployment lives in `relay/wrangler.toml`; build first, then use `wrangler deploy --config relay/wrangler.toml`. The private `remote-bootstrap.json` in the Mac profile contains the relay URL/enrollment secret. Do not commit it or copy it into the app. Run `npm run smoke:relay` for a real local Worker, `npm run smoke:mobile` for phone UI fixtures, and `npm run smoke:remote` for live Cloudflare + isolated Electron + real PTY + preview + Claude permission-hook integration. The last command uses the private Mac bootstrap; it neither touches your running Luce sessions nor submits model prompts. Cloudflare usage/billing depends on your plan and traffic.
+The deployment lives in `relay/wrangler.toml`; configure your own account and enrollment secret using the [self-hosting instructions](docs/remote-self-hosting.md). The private `remote-bootstrap.json` in the Mac profile contains the relay URL/enrollment secret. Do not commit it or copy it into the app. Run `npm run smoke:relay` for a real local Worker, `npm run smoke:mobile` for phone UI fixtures, and `npm run smoke:remote` for live Cloudflare + isolated Electron + real PTY + preview + Claude permission-hook integration. The last command uses your private Mac bootstrap; it neither touches your running Luce sessions nor submits model prompts. Cloudflare usage/billing depends on your plan and traffic.
 
 ## Project tabs, sound and images
 

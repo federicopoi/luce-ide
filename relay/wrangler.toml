@@ -1,7 +1,6 @@
 name = "luce-relay"
 main = "src/index.js"
 compatibility_date = "2026-10-02"
-account_id = "1e85cc521d44572341e8632fddfd9065"
 workers_dev = true
 
 [assets]
