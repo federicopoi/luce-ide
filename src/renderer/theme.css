@@ -253,3 +253,9 @@ dialog::backdrop{background:#0008;backdrop-filter:blur(3px)}
 .global-history-row .recent-title{grid-column:1/-1;overflow:hidden}
 .global-history-row .recent-context{grid-column:1;grid-row:2}
 .global-history-row .conversation-time{grid-column:2;grid-row:2;white-space:nowrap;font-size:10px;line-height:16px;color:#858585}
+
+.cli-updates{margin-top:20px;padding-top:18px;border-top:1px solid var(--border)}
+.cli-update-provider{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;color:#bdbdbd;font-size:12px}
+.cli-update-provider>span{display:flex;align-items:center;gap:7px}
+.cli-update-provider svg{width:15px;height:15px}
+.cli-update-provider small{color:#929292;font-size:11px}

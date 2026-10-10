@@ -2,6 +2,7 @@ const {contextBridge,ipcRenderer,webUtils}=require('electron');
 const invoke=(name,...args)=>ipcRenderer.invoke(`luce:${name}`,...args);
 function subscribe(name,callback){const listener=(_event,value)=>callback(value);ipcRenderer.on(`luce:${name}`,listener);return ()=>ipcRenderer.removeListener(`luce:${name}`,listener);}
 contextBridge.exposeInMainWorld('luce',{
+ checkCLIUpdates:()=>invoke('cli-update-check'),
  retryWorkspace:()=>invoke('retry-workspace'),dismissWorkspace:id=>invoke('dismiss-workspace',id),
  resolveProjectFile:(id,relative)=>invoke('resolve-project-file',id,relative),locateTerminalFile:(id,text)=>invoke('locate-terminal-file',id,text),
  listProjectFiles:(id,relative,hidden)=>invoke('project-files',id,relative,hidden),previewProjectFile:(id,relative)=>invoke('project-file-preview',id,relative),

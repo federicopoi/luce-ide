@@ -36,6 +36,8 @@ Agent terminal headers have an **Auto** switch. It starts off in each new termin
 
 ## Use
 
+Luce does not update Codex or Claude Code automatically on startup. Use **Settings → Update Codex and Claude** to request an update through the existing npm, Homebrew, or native Claude installation. Custom executable overrides are left untouched.
+
 Open `~/Applications/Luce.app`. Add a project folder, or choose **Find local sessions** to add a folder from your existing agent histories. Select a project in the left rail. Its live terminals and saved conversations appear beside it.
 
 - **Recent conversations:** the Projects rail shows saved conversations from all local Codex and Claude folders, newest first and grouped by date. Search by title, folder, or provider. Click to open or focus an existing terminal. Right-click **Add to project** to choose an existing project or create a named project group; you can also drag a conversation onto a project. Organization preserves the conversation’s original working folder. Discovery refreshes every 20 seconds, with a manual refresh button.
