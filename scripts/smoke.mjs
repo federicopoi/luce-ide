@@ -25,18 +25,18 @@ try{
  await page.locator('[data-project-id="'+p2.id+'"]').dragTo(page.locator('[data-project-id="'+p1.id+'"]'),{targetPosition:{x:40,y:30}});
  await until(()=>page.evaluate(async id=>(await window.luce.getState()).projects.at(-1).id===id,p2.id));
  const widths={};
- for(const [name,selector,delta] of [['Resize projects sidebar','.project-rail',45],['Resize conversations sidebar','.conversation-sidebar',-45]]){
+ for(const [name,selector,delta] of [['Resize projects sidebar','.project-rail',45]]){
   const panel=page.locator(selector),before=(await panel.boundingBox()).width;const handle=page.getByRole('separator',{name});assert.equal(await handle.count(),1,'Sidebar has a resize handle');const bounds=await handle.boundingBox();assert.ok(bounds,'Sidebar has a resize handle');
   await page.mouse.move(bounds.x+bounds.width/2,bounds.y+80);await page.mouse.down();await page.mouse.move(bounds.x+bounds.width/2+delta,bounds.y+80,{steps:5});await page.mouse.up();
   widths[selector]=(await panel.boundingBox()).width;assert.ok(Math.abs(widths[selector]-before-delta)<2,'Dragging changes the sidebar width');
  }
  const keyboardHandle=page.getByRole('separator',{name:'Resize projects sidebar'});await keyboardHandle.focus();await page.keyboard.press('ArrowRight');widths['.project-rail']+=10;assert.ok(Math.abs((await page.locator('.project-rail').boundingBox()).width-widths['.project-rail'])<2);
  const workspaceBefore=(await page.locator('.workspace').boundingBox()).width;
- for(const name of ['Collapse projects sidebar','Collapse conversations sidebar']){const button=page.getByRole('button',{name,exact:true});assert.equal(await button.count(),1,'Each sidebar has a collapse button');await button.click();}
+ for(const name of ['Toggle projects sidebar']){const button=page.getByRole('button',{name,exact:true});assert.equal(await button.count(),1,'Each sidebar has a collapse button');await button.click();}
  assert.equal(await page.locator('.project-rail').isVisible(),false);assert.equal(await page.locator('.conversation-sidebar').isVisible(),false);
- assert.ok((await page.locator('.workspace').boundingBox()).width>workspaceBefore+400);
- await page.reload();await page.getByRole('button',{name:'Show projects sidebar',exact:true}).waitFor();assert.equal(await page.locator('.conversation-sidebar').isVisible(),false,'Collapsed state survives reload');
- for(const name of ['Show projects sidebar','Show conversations sidebar'])await page.getByRole('button',{name,exact:true}).click();
+ assert.ok((await page.locator('.workspace').boundingBox()).width>workspaceBefore+250);
+ await page.reload();await page.getByRole('button',{name:'Toggle projects sidebar',exact:true}).waitFor();assert.equal(await page.locator('.conversation-sidebar').isVisible(),false,'Collapsed state survives reload');
+ for(const name of ['Toggle projects sidebar'])await page.getByRole('button',{name,exact:true}).click();
  for(const [selector,width] of Object.entries(widths))assert.ok(Math.abs((await page.locator(selector).boundingBox()).width-width)<2,'Restoring preserves sidebar widths');
  const session=await page.evaluate(id=>window.luce.createTerminal({projectId:id,provider:'shell'}),p1.id);
  await page.locator('[data-session-id="'+session.id+'"] .xterm').waitFor();

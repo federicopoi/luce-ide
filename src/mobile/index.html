@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#222426">
+  <meta name="theme-color" content="#1f1e1b">
   <meta name="description" content="Secure phone control for Luce on your Mac">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/luce-mark.svg" type="image/svg+xml">
@@ -16,10 +16,10 @@
   <header class="topbar">
     <a class="brand" href="#projects" aria-label="Luce Remote projects">
       <svg class="brand-mark" viewBox="0 0 512 512" aria-hidden="true"><circle cx="65" cy="256" r="44"/><path d="M105 197 334 48Q381 17 413 58Q447 103 393 130L124 223Q117 207 105 197Z"/><path d="M105 315 334 464Q381 495 413 454Q447 409 393 382L124 289Q117 305 105 315Z"/><path d="M130 245 441 153Q480 140 480 184V328Q480 373 441 359L130 273Q134 260 130 245Z" class="brand-mark-accent"/></svg>
-      <span>Luce <span class="brand-light">Remote</span></span>
+      <span>luce</span>
     </a>
     <div class="connection"><i id="connection-dot" class="dot offline"></i><span id="connection-label">Not paired</span></div>
-    <button id="device-menu" class="plain-button" aria-label="Device options" title="Device options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></button>
+    <button id="device-menu" class="plain-button" aria-label="Device options" title="Device options"><span data-icon="more"></span></button>
   </header>
 
   <main>
@@ -32,46 +32,46 @@
     </section>
 
     <section id="projects-view" class="view" hidden>
-      <div class="page-heading"><div><h1>Projects</h1></div><span id="project-count" class="count-pill">0</span></div>
-      <label class="workspace-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg><input id="project-search" type="search" placeholder="Find a project or conversation" aria-label="Search projects and conversations"></label><div id="project-list" class="project-list"></div>
+      <div class="page-heading"><div><h1 id="projects-heading">Projects</h1></div><div class="heading-actions"><span id="project-count" class="count-pill">0</span><button id="mobile-project-view" class="plain-button" aria-label="Toggle project view" title="Use project tabs" aria-pressed="false"></button></div></div>
+      <div id="mobile-project-tabs" class="mobile-project-tabs" role="tablist" aria-label="Projects" hidden></div><p id="project-context" class="project-context" hidden></p><label class="workspace-search"><span data-icon="search"></span><input id="project-search" type="search" placeholder="Find a project or conversation" aria-label="Search projects and conversations"></label><div id="project-list" class="project-list"></div>
     </section>
 
     <section id="live-view" class="view" hidden>
       <div class="page-heading"><div><h1>Live terminals</h1><p id="live-summary" class="page-summary"></p></div><button id="refresh-live" class="small-button" aria-label="Refresh terminals">Refresh</button></div>
-      <label class="workspace-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/></svg><input id="live-search" type="search" placeholder="Find a conversation" aria-label="Search live terminals"></label>
+      <label class="workspace-search"><span data-icon="search"></span><input id="live-search" type="search" placeholder="Find a conversation" aria-label="Search live terminals"></label>
       <div id="live-filters" class="workspace-filters" role="group" aria-label="Terminal filters"><button data-filter="open" aria-pressed="true">Open</button><button data-filter="working" aria-pressed="false">Working</button><button data-filter="attention" aria-pressed="false">Needs input</button><button data-filter="all" aria-pressed="false">All</button></div>
       <div id="live-list" class="project-list"></div>
     </section>
     <section id="terminal-view" class="view" hidden>
-      <div class="terminal-switch"><label for="terminal-switcher">Conversation</label><select id="terminal-switcher" aria-label="Switch conversation"></select></div><div class="terminal-heading"><button id="back-projects" class="back-button" aria-label="Back to terminals"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><div><p id="terminal-project" class="terminal-project-label"></p><h1 id="terminal-title">Terminal</h1></div><button id="rename-terminal" class="plain-button" aria-label="Rename conversation"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 4 5 5M4 20l4-1 12-12-5-5L3 14z"/></svg></button></div>
-      <div class="terminal-meta"><span id="terminal-provider" class="provider-pill"></span><span id="terminal-status"></span><span id="terminal-account"></span><span id="terminal-size"></span><button id="terminal-auto" class="small-button" role="switch" aria-label="Auto approve permission requests" aria-checked="false">Auto</button></div>
+      <div class="terminal-heading"><button id="back-projects" class="back-button" aria-label="Back to terminals"><span data-icon="back"></span></button><div><p id="terminal-project" class="terminal-project-label"></p><h1 id="terminal-title">Terminal</h1></div><details id="terminal-options" class="terminal-options"><summary aria-label="Conversation options"><span data-icon="more"></span></summary><div class="terminal-options-panel">      <div class="terminal-switch"><label for="terminal-switcher">Conversation</label><select id="terminal-switcher" aria-label="Switch conversation"></select></div>      <div class="terminal-meta"><span id="terminal-provider" class="provider-pill"></span><span id="terminal-status"></span><span id="terminal-account"></span><span id="terminal-size"></span><button id="terminal-auto" class="small-button" role="switch" aria-label="Auto approve permission requests" aria-checked="false">Auto</button></div>
+      <div id="terminal-toolbar" class="terminal-toolbar"><button id="interrupt-button" class="small-button" aria-label="Interrupt terminal">Interrupt</button><button id="clear-button" class="small-button" aria-label="Clear terminal">Clear</button><button id="close-button" class="small-button danger-text" aria-label="Close terminal">Close</button><button id="preview-button" class="small-button" aria-label="Preview">Preview</button><button id="usage-button" class="small-button" aria-label="Usage and account">Usage</button></div><div class="terminal-input-tools"><button id="paste-button" class="secondary-button" type="button">Paste</button><button id="enter-button" class="secondary-button" type="button">Enter</button><button id="rename-terminal" class="small-button" aria-label="Rename conversation">Rename</button></div></div></details></div>
       <p id="session-compatibility" class="preview-compatibility" hidden>Restart Luce on your Mac to enable phone renaming and Auto controls.</p><div id="approval-list" class="approval-list"></div>
       <section id="terminal-exited" class="terminal-exited" hidden aria-live="polite"><div><strong>Terminal exited</strong><p id="terminal-exit-reason"></p></div><button id="start-another-terminal" class="secondary-button" type="button">Start another terminal</button></section>
-      <div id="terminal-toolbar" class="terminal-toolbar"><button id="interrupt-button" class="small-button" aria-label="Interrupt terminal">Interrupt</button><button id="clear-button" class="small-button" aria-label="Clear terminal">Clear</button><button id="close-button" class="small-button danger-text" aria-label="Close terminal">Close</button><button id="preview-button" class="small-button" aria-label="Preview">Preview</button><button id="usage-button" class="small-button" aria-label="Usage and account">Usage</button></div>
+
       <div id="terminal-output" class="terminal-output" role="log" aria-label="Terminal output" aria-live="off"></div>
       <form id="composer" class="composer">
-        <textarea id="terminal-message" aria-label="Message terminal" rows="3" placeholder="Send a message to this terminal…" enterkeyhint="send"></textarea>
-        <div class="composer-actions"><button id="paste-button" class="secondary-button" type="button">Paste</button><button id="enter-button" class="secondary-button" type="button">Enter</button><span class="composer-hint">Explicitly sent to Mac</span><button id="send-button" class="primary-button" type="submit">Send</button></div>
+        <textarea id="terminal-message" aria-label="Message terminal" rows="1" placeholder="Message…" enterkeyhint="send"></textarea>
+        <button id="send-button" class="primary-button" type="submit" aria-label="Send"><span data-icon="external"></span></button>
       </form>
     </section>
 
     <section id="preview-view" class="view preview-view" hidden>
-      <div class="preview-heading"><button id="back-terminal" class="back-button" aria-label="Back to terminal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><div><h1>Preview</h1></div><button id="fullscreen-button" class="small-button" aria-label="Toggle full screen">Full screen</button></div>
+      <div class="preview-heading"><button id="back-terminal" class="back-button" aria-label="Back to terminal"><span data-icon="back"></span></button><div><h1>Preview</h1><p id="preview-project" class="terminal-project-label"></p></div><button id="fullscreen-button" class="small-button" aria-label="Toggle full screen">Full screen</button></div>
       <div class="preview-controls" aria-label="Website browser controls">
         <div class="preview-control-row preview-navigation"><button id="preview-back" class="small-button" type="button" aria-label="Website back">Back</button><button id="preview-forward" class="small-button" type="button" aria-label="Website forward">Forward</button><button id="preview-reload" class="small-button" type="button" aria-label="Reload website">Reload</button><span class="preview-control-spacer"></span><button id="preview-phone-mode" class="small-button selected" type="button" aria-pressed="true">Phone</button><button id="preview-desktop-mode" class="small-button" type="button" aria-pressed="false">Desktop</button></div>
         <p id="preview-compatibility" class="preview-compatibility" hidden>Advanced website controls need the latest Luce app. Restart Luce on your Mac to enable typing, browser keys, and viewport switching.</p>
-        <form id="preview-text-form" class="preview-text-form"><label class="visually-hidden" for="preview-text">Text for the focused website field</label><textarea id="preview-text" rows="2" maxlength="4096" placeholder="Type into the focused website field…" aria-label="Text for the focused website field"></textarea><button class="small-button" type="submit">Insert text</button></form>
-        <div class="preview-key-row" aria-label="Website keys"><span>Send key</span><button class="small-button" data-preview-key="Enter" type="button">Enter</button><button class="small-button" data-preview-key="Tab" type="button">Tab</button><button class="small-button" data-preview-key="Backspace" type="button">Backspace</button><button class="small-button" data-preview-key="Escape" type="button">Escape</button></div>
+        <details id="preview-tools" class="preview-tools"><summary>Website controls</summary><form id="preview-text-form" class="preview-text-form"><label class="visually-hidden" for="preview-text">Text for the focused website field</label><textarea id="preview-text" rows="2" maxlength="4096" placeholder="Type into the focused website field…" aria-label="Text for the focused website field"></textarea><button class="small-button" type="submit">Insert text</button></form>
+        <div class="preview-key-row" aria-label="Website keys"><span>Send key</span><button class="small-button" data-preview-key="Enter" type="button">Enter</button><button class="small-button" data-preview-key="Tab" type="button">Tab</button><button class="small-button" data-preview-key="Backspace" type="button">Backspace</button><button class="small-button" data-preview-key="Escape" type="button">Escape</button></div></details>
       </div>
-      <p class="preview-note">Tap to click. Swipe to scroll. Text and keys go to the focused website field.</p>
+      <p class="preview-note">Tap to click · Swipe to scroll.</p>
       <div id="preview-frame" class="preview-frame"><img id="preview-image" alt="Live browser preview" draggable="false"><div id="preview-empty" class="preview-empty">Waiting for browser preview…</div></div>
     </section>
 
     <section id="create-view" class="view" hidden>
-      <div class="page-heading"><div><h1>New terminal</h1></div></div>
+      <div class="page-heading"><div><h1>New conversation</h1></div></div>
       <form id="create-form" class="form-card">
         <label for="create-project">Project</label><select id="create-project" required></select>
-        <label for="create-provider">Provider</label><select id="create-provider"><option value="codex">Codex</option><option value="claude">Claude Code</option><option value="shell">Shell</option></select>
+        <div id="create-providers" class="provider-choices" role="radiogroup" aria-label="Conversation provider"></div><select id="create-provider" aria-label="Provider" hidden><option value="codex">Codex</option><option value="claude">Claude Code</option><option value="shell">Terminal</option></select>
         <div id="account-field"><label for="create-account">Codex account</label><select id="create-account"></select></div>
         <button class="primary-button wide" type="submit">Create terminal</button>
       </form>
@@ -93,11 +93,11 @@
   </main>
 
   <nav id="tabbar" class="tabbar" aria-label="Main navigation" hidden>
-    <button data-view="projects" aria-label="Projects"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>Projects</span></button>
-    <button data-view="terminal" aria-label="Terminals"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="m7 9 3 3-3 3m6 0h4"/></svg><span>Live</span></button>
-    <button data-view="create" aria-label="New terminal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>New</span></button>
-    <button data-view="accounts" aria-label="Accounts"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Accounts</span></button>
-    <button data-view="settings" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M19.4 15.1 21 16l-1.5 2.6-1.8-.5a8 8 0 0 1-1.6.9l-.3 1.6h-3l-.3-1.6a8 8 0 0 1-1.6-.9l-1.8.5L7.6 16l1.6-.9a7 7 0 0 1 0-1.8L7.6 12l1.5-2.6 1.8.5a8 8 0 0 1 1.6-.9l.3-1.6h3l.3 1.6a8 8 0 0 1 1.6.9l1.8-.5L21 12l-1.6 1.3a7 7 0 0 1 0 1.8Z"/></svg><span>Settings</span></button>
+    <button data-view="projects" aria-label="Projects"><span data-icon="folder"></span><span>Projects</span></button>
+    <button data-view="terminal" aria-label="Terminals"><span data-icon="shell"></span><span>Live</span></button>
+    <button data-view="create" aria-label="New terminal"><span data-icon="plus"></span><span>New</span></button>
+    <button data-view="accounts" aria-label="Accounts"><span data-icon="accounts"></span><span>Accounts</span></button>
+    <button data-view="settings" aria-label="Settings"><span data-icon="settings"></span><span>Settings</span></button>
   </nav>
   <dialog id="confirm-dialog" class="dialog-card"><form method="dialog"><p id="confirm-copy"></p><div><button id="confirm-cancel" class="secondary-button" value="cancel">Cancel</button><button id="confirm-action" class="danger-button" value="confirm">Confirm</button></div></form></dialog>
 <dialog id="rename-dialog" class="dialog-card"><form id="rename-form"><h2>Rename conversation</h2><label for="rename-input">Name</label><input id="rename-input" maxlength="100" required autocomplete="off"><div class="rename-actions"><button id="rename-cancel" class="secondary-button" type="button">Cancel</button><button class="primary-button" type="submit">Save</button></div></form></dialog>

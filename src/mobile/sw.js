@@ -1,19 +1,19 @@
-const CACHE = 'luce-remote-shell-v1';
+// Build revision: luce-remote-shell-v1. Push works without storing the design.
 const SHELL = ['/', '/styles.css', '/mobile.css', '/mobile.js', '/manifest.webmanifest', '/luce-mark.svg', '/icon-256.png', '/icon-512.png'];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('luce-remote-shell-') && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim()));
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('luce-remote-shell-')).map(key => caches.delete(key)))).then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', event => {
   const request = event.request;
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== self.location.origin || !SHELL.includes(url.pathname)) return;
-  event.respondWith(caches.match(request).then(cached => cached || fetch(request)));
+  event.respondWith(fetch(new Request(request, {cache: 'no-store'})));
 });
 
 self.addEventListener('push', event => {

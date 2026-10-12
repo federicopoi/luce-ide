@@ -172,3 +172,46 @@ Added Accounts → GitHub device sign-in, editable commit identities and persist
 Website/file previews now keep the source terminal live in a resizable left column, temporarily replacing navigation. Back restores pane arrangement and sidebar preferences; full preview and no-source modes work. File-link async source identity is retained. Project/file trees have softer selection, consistent outlines, SVG chevrons and indentation guides.
 
 Verified 124 unit/integration tests, general app/Codex account/files-media/current-cwd/drag/links/GitHub-profile-relaunch/Codex-continuation/preview-context smokes. Packaged preview-context and GitHub account smokes also passed. Reviewed; material findings fixed with regressions and rechecked. Installed in ~/Applications/Luce.app; prior bundle preserved as Luce-backup-1791167090416.app. Running user sessions were left open; quit/reopen loads the update. Real GitHub sign-in is a user action.
+
+
+### Mobile desktop-design alignment — 2026-10-04
+
+- Matched the desktop dark surfaces, neutral focus/selection styling, yellow Luce center, provider marks, conversation rows, New provider choices, Accounts, Settings, dialogs, and composer.
+- Added a persisted project list/tabs switch beside the heading. Tabs show only the chosen project's conversations; original collapsed-project preferences and per-conversation drafts remain intact. Keyboard focus survives tab activation and state refresh.
+- Phone website previews hide global navigation, expand using CSS instead of unsupported browser fullscreen APIs, and keep advanced typing/key controls in a disclosure. Wide screens keep the source conversation beside the preview; expanded mode uses the entire workspace. Back restores navigation.
+- Corrected preview image positioning so letterboxing and normalized taps remain accurate in the flexible layout. Also fixed explicit ZDOTDIR selection when the browser helper inherits a parent Luce shell environment.
+- Verification: 126 unit tests; extended mobile fixture across 320/390/768/1024px; pre-deployment live-relay test with local mobile assets; packaged Mac against deployed phone UI. Real PTY Send/Enter, exact Claude/Codex approvals, browser text/keys/scroll/navigation, native Mac preview isolation, creation, pairing and revocation passed. Review findings resolved.
+- Published existing Worker version `085b6835-1f5f-4355-af96-ed124e0d8abd`. Hosted HTML, CSS, JS, manifest and service-worker hashes match the build. Installed companion Mac archive matches the signed package; previous app preserved. User sessions left running. Phone refresh/reopen loads the new shell; pairing data is preserved.
+
+
+### Fresh mobile design delivery — 2026-10-05
+
+- Removed the service-worker shell cache and cache-first reads. Activation clears only old Luce design caches; pairing storage and push subscriptions remain intact. Asset requests use network-only `no-store`, and worker registration bypasses HTTP cache when checking updates.
+- Cloudflare runs the Worker before assets. Static responses send browser/CDN no-store headers and remove validators; conditional requests return current deployed bytes rather than reusing an old shell. API and websocket routing is preserved.
+- Verification: 128 unit tests; mobile UI fixture; local Cloudflare relay smoke including no-store HTML/CSS/JS/SW checks; reviewed changes. Deployed version `36cc9191-0e56-4f95-a293-f5ff0164f3cf`; live asset responses verified no-store, HTTP 200 despite old validators, and no ETag.
+
+### Desktop terminal and navigation polish — 2026-10-05
+
+- Replaced opaque terminal selection with a subtle, consistent highlight. Terminal canvas, ANSI black and pane headers share charcoal backgrounds across focus changes; copying selected text remains available.
+- Gave project tabs larger targets, quieter selected styling and consistent spacing. Improved local-project search and discovery rows; removed the nested input border and used one neutral focus treatment.
+- Moved sidebar visibility into the left tool rail. The folder/chat icon shows or hides Projects/Conversations for the current mode, with persisted visibility and accessible expanded state. Removed the heading chevron and titlebar restore button. Right-click, Settings and the native View menu retain the project sidebar/tabs choice.
+- Verification: 128 unit tests; desktop polish, tabs, redesign, preview context, terminal resizing, sidebar usage, terminal links, file/media previews and drag paths, general app, completion and real session-relaunch checks. The file fixture now uses clean Bash startup, waits for layout and crosses terminal cells to avoid a stale xterm hover cache. Independent review resolved the distinction between mode selection and sidebar visibility. Installed bundle passed project-tabs checks, signature verification and archive parity.
+- Installed `~/Applications/Luce.app`, preserving `Luce-backup-1791217980155.app`. Running user app and terminals left open; quit/reopen loads the changes.
+
+### Simplified project activity dots — 2026-10-05
+
+- Project rows and tabs show one small status dot above the open-terminal count. Yellow covers work or required attention, green covers pending completion, and idle projects have no dot. Work/response subcounts and separate adjacent indicators are removed; detailed activity remains in accessible labels and tooltips.
+- Verified activity transitions, mixed working/completed agents, unchanged open counts, acknowledgments, sound/Auto behavior, reload persistence and project tabs using isolated completion and tabs fixtures. Built and signed the Mac app.
+
+### Conversation timestamps and quiet restoration — 2026-10-05
+
+- Open and saved conversation rows show a relative timestamp below the title, alongside the provider/account. Saved history uses its update time; unmatched open terminals use their creation time. Labels refresh each minute without rebuilding rows or stealing focus.
+- Removed automatic restore-failure sidebar banners and the startup toast. Failure records and saved conversations remain intact for future restore/resume; application startup errors and explicit-action errors still report their failures.
+- Verification: 128 unit tests, isolated saved/live timestamp fixture with a real failed restore, unified navigation, global recents and real shell/Codex/Claude quit/relaunch checks. Built and signed the Mac app. Folder-access policy remains pending clarification; current ad-hoc signing changes its designated identity across builds and may cause renewed macOS privacy prompts after updates.
+
+### Persistent signing and global conversation search — 2026-10-05
+
+- Confirmed the requested permission policy is to remember access. Replaced per-build ad-hoc signing with a persistent local certificate in a private dedicated keychain. Its user trust is scoped to code signing; signing temporarily extends the keychain lookup list and restores it on success/failure. Incomplete or mismatched identity files stop packaging instead of silently replacing the certificate. Private key exports are removed after import, and signing credentials remain outside the repo and app bundle.
+- Native verification used two different signed builds: their CDHashes differ, their certificate-bound designated requirements match, and both pass verification against that requirement. The actual Luce package uses the same certificate-bound identity. Existing macOS folder grants are not edited or bypassed; migration from the old identity can require one new approval. Actual future folder-prompt behavior still depends on those user grants.
+- The primary conversation search and CmdK now search saved local Codex/Claude histories from all folders and live terminals from all projects, including folders not yet added. Results show folder/provider/account/time, deduplicate running saved conversations and reuse existing resume/project organization. Query clear restores the selected project's rows. Search matches titles and metadata; full transcript text is not indexed.
+- Verification: 131 unit tests; global-search, recents, timestamps, tabs, organization and redesign UI checks; independent review. The signed package passed global-search and quiet-restoration fixtures plus full signature/link verification. Local signing setup is documented in `docs/mac-permissions.md`.

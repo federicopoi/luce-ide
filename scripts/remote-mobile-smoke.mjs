@@ -63,6 +63,7 @@ const bundled = await build({
   bundle: true,
   format: 'esm',
   write: false,
+  loader:{'.svg':'text'},
   outfile: 'mobile.js',
   plugins: [{
     name: 'remote-protocol-fixture',
@@ -126,19 +127,37 @@ try {
   });
   assert.ok(projectLayout.project.bottom <= projectLayout.session.top, JSON.stringify(projectLayout));
   assert.ok(projectLayout.project.bottom-projectLayout.project.top <= 64, `project rows stay compact: ${JSON.stringify(projectLayout)}`);
-  assert.ok(Number.parseFloat(projectLayout.radius) <= 5, `project rows use restrained corners: ${JSON.stringify(projectLayout)}`);
+  assert.ok(Number.parseFloat(projectLayout.radius) <= 8, `project groups use restrained corners: ${JSON.stringify(projectLayout)}`);
   assert.equal(projectLayout.projectIcon, true, 'project mark uses an outlined SVG icon');
   assert.equal(projectLayout.tabIcons, 5, 'every navigation item uses an outlined SVG icon');
   assert.equal(projectLayout.tabLabelSize, '11px', 'navigation labels stay readable without enlarging the bottom bar');
   await page.screenshot({path:path.join(root,'artifacts/mobile-polish/projects-390x844.png'),fullPage:true});
+  assert.equal(await page.locator('.page-heading #mobile-project-view').count(),1,'Project view toggle stays beside Projects');
+  await page.evaluate(()=>{window.__mobileState.projects.push({id:'design-project',name:'Agency',directory:'/Users/me/agency'});window.__remote.events.get('state')(structuredClone(window.__mobileState));});
+  await page.getByRole('button',{name:'Toggle project view'}).click();
+  assert.equal(await page.getByRole('tab',{name:'Agency',exact:true}).count(),1);
+  await page.getByRole('tab',{name:'Agency',exact:true}).focus();await page.keyboard.press('Enter');assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-selected')),'true','Activating a project tab preserves keyboard focus');assert.equal(await page.locator('#project-list .session-row').count(),0,'Tabs show only selected project conversations');
+  await page.getByRole('tab',{name:'Luce',exact:true}).click();assert.equal(await page.locator('#project-list .session-row').count(),1);
+  await page.waitForTimeout(100);await page.screenshot({path:path.join(root,'artifacts/mobile-polish/project-tabs-390x844.png')});
+  await page.getByRole('button',{name:'Toggle project view'}).click();
+  await page.evaluate(()=>{window.__mobileState.projects=window.__mobileState.projects.filter(p=>p.id!=='design-project');window.__remote.events.get('state')(structuredClone(window.__mobileState));});
+
   assert.equal(await page.locator('.project-header .status-attention').count(),1,'Project shows pending approval indicator');
   await page.locator('.session-row').click();
   await page.getByRole('heading', { name: 'Current task' }).waitFor();
   await page.waitForFunction(() => window.__remote.requests.some(r => r.method === 'terminalSnapshot'));
+  assert.equal(await page.locator('#terminal-options').getAttribute('open'),null,'Extra controls start collapsed');
+  assert.equal(await page.locator('#composer button').count(),1,'Composer contains only Send');
+  await page.screenshot({path:path.join(root,'artifacts/mobile-polish/terminal-simple-390x844.png'),fullPage:true});
+  for(const viewport of [{width:320,height:568},{width:390,height:400},{width:430,height:932}]){await page.setViewportSize(viewport);const bounds=await page.locator('#composer').boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=viewport.width&&bounds.y+bounds.height<=viewport.height,`Composer fits ${JSON.stringify(viewport)}`);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Conversation has no page overflow');}await page.setViewportSize({width:390,height:844});
+  const menuClosed=await page.locator('#terminal-options summary').boundingBox();
+  await page.locator('#terminal-options summary').click();
+  const menuOpen=await page.locator('#terminal-options summary').boundingBox();assert.deepEqual(menuOpen,menuClosed,'Menu button stays fixed when toggled');
+  assert.equal(await page.locator('#tabbar').isVisible(),false,'Conversation keeps navigation behind Back');
   const activeLayout = await page.evaluate(() => {
     const composer=document.querySelector('#composer').getBoundingClientRect();
     const tabbar=document.querySelector('#tabbar').getBoundingClientRect();
-    return {composerBottom:composer.bottom,tabbarTop:tabbar.top,toolbarHeight:document.querySelector('#interrupt-button').getBoundingClientRect().height};
+    return {composerBottom:composer.bottom,tabbarTop:document.querySelector('#tabbar').hidden||getComputedStyle(document.querySelector('#tabbar')).display==='none'?innerHeight:tabbar.top,toolbarHeight:document.querySelector('#interrupt-button').getBoundingClientRect().height};
   });
   assert.ok(activeLayout.composerBottom <= activeLayout.tabbarTop, `composer stays above bottom navigation: ${JSON.stringify(activeLayout)}`);
   assert.ok(activeLayout.toolbarHeight >= 40, `terminal actions have comfortable touch targets: ${JSON.stringify(activeLayout)}`);
@@ -182,10 +201,13 @@ try {
   await page.waitForFunction(() => window.__remote.requests.some(r => r.method === 'write' && r.params.id === 't1' && r.params.data === '\r'));
   const sendRequests = await page.evaluate(index => window.__remote.requests.slice(index), sendRequestStart);
   assert.deepEqual(sendRequests.map(request => [request.method, request.params.data]), [['submit','echo from phone'],['write','echo from phone'],['state',undefined],['write','\r']], 'legacy host fallback writes text, checks live state, then sends Enter separately');
+  await page.locator('#terminal-message').fill('Keyboard message');await page.locator('#terminal-message').press('Shift+Enter');assert.match(await page.locator('#terminal-message').inputValue(),/\n/);await page.locator('#terminal-message').press('Enter');await page.waitForFunction(()=>document.querySelector('#terminal-message').value==='');
   const enterRequestStart = await page.evaluate(() => window.__remote.requests.length);
+  if(!(await page.locator('#terminal-options').evaluate(el=>el.open)))await page.locator('#terminal-options summary').click();
   await page.getByRole('button', { name: 'Enter', exact: true }).click();
   await page.waitForFunction(index => window.__remote.requests.slice(index).some(r => r.method === 'write' && r.params.data === '\r'), enterRequestStart);
   assert.deepEqual(await page.evaluate(index => window.__remote.requests.slice(index).map(r => [r.method,r.params.data]), enterRequestStart), [['write','\r']], 'Enter sends one carriage return without resending text');
+  if(!(await page.locator('#terminal-options').evaluate(el=>el.open)))await page.locator('#terminal-options summary').click();
   await page.getByRole('button', { name: 'Interrupt terminal' }).click();
   await page.getByRole('button', { name: 'Confirm interrupt' }).click();
   await page.waitForFunction(() => window.__remote.requests.some(r => r.method === 'interrupt'));
@@ -211,6 +233,7 @@ try {
   assert.equal(await page.evaluate(() => document.querySelector('#connection-label').textContent), 'Connected');
   assert.equal(await page.evaluate(() => window.__connections.flatMap(connection => connection.requests).filter(r => ['submit','write','interrupt','approve'].includes(r.method)).length), mutationCount);
   await page.evaluate(() => { window.__delayNextPreview=true; });
+  if(!(await page.locator('#terminal-options').evaluate(el=>el.open)))await page.locator('#terminal-options summary').click();
   await page.getByRole('button', { name: 'Preview' }).click();
   await page.waitForFunction(() => window.__remote.requests.some(r => r.method === 'preview'));
   await page.waitForFunction(() => window.__remote.requests.some(r => r.method === 'preview' && r.params.mode === 'phone' && r.params.width >= 320 && r.params.height >= 320));
@@ -228,6 +251,14 @@ try {
   assert.equal(await page.locator('#preview-text').isDisabled(), true, 'typing remains disabled until the Mac supports the control RPC');
   await page.evaluate(() => window.__remote.events.get('state')({...window.__mobileState,remoteCapabilities:{previewControls:true,submit:true}}));
   assert.equal(await page.locator('#preview-compatibility').isVisible(), false);
+  assert.equal(await page.locator('#tabbar').isVisible(),false,'Website preview hides global navigation');
+  assert.equal(await page.locator('.topbar').isVisible(),false,'Phone preview uses the full workspace');
+  const frameHeight=(await page.locator('#preview-frame').boundingBox()).height;
+  await page.getByRole('button',{name:'Toggle full screen'}).click();assert.ok((await page.locator('#preview-frame').boundingBox()).height>frameHeight,'Full screen expands the website without relying on browser fullscreen APIs');
+  await page.getByRole('button',{name:'Toggle full screen'}).click();
+  await page.screenshot({path:path.join(root,'artifacts/mobile-polish/preview-focused-390x844.png')});
+  await page.setViewportSize({width:1024,height:900});assert.equal(await page.locator('#terminal-view').isVisible(),true,'Wide preview retains conversation on the left');const wide=await page.evaluate(()=>({chat:document.querySelector('#terminal-view').getBoundingClientRect().toJSON(),preview:document.querySelector('#preview-view').getBoundingClientRect().toJSON()}));assert.ok(wide.chat.right<=wide.preview.left,'Conversation and preview use separate columns');await page.getByRole('button',{name:'Toggle full screen'}).click();assert.equal(await page.locator('#terminal-view').isVisible(),false);await page.getByRole('button',{name:'Toggle full screen'}).click();await page.setViewportSize({width:390,height:844});
+  await page.locator('#preview-tools summary').click();
   await page.getByRole('button', { name: 'Desktop', exact: true }).click();
   await page.waitForFunction(() => window.__remote.requests.some(r => r.method === 'preview' && r.params.mode === 'desktop'));
   await page.waitForFunction(() => document.querySelector('#preview-image').dataset.mode === 'desktop');
@@ -235,6 +266,7 @@ try {
   await page.evaluate(() => window.__releasePreview?.());
   await page.waitForTimeout(40);
   assert.equal(await page.locator('#preview-image').getAttribute('data-mode'), 'desktop', 'an older phone capture cannot replace the selected desktop viewport');
+  await page.screenshot({path:path.join(root,'artifacts/mobile-polish/preview-design-390x844.png'),fullPage:true});
   await page.locator('#preview-frame').click({ position: { x: 190, y: 4 } });
   await page.waitForTimeout(40);
   assert.equal(await page.evaluate(() => window.__remote.requests.filter(r => r.method === 'previewInput').length), 0, 'taps in screenshot letterboxing are ignored');
@@ -259,14 +291,16 @@ try {
   await page.getByRole('button', { name: 'Website back', exact: true }).click();
   await page.waitForFunction(() => window.__remote.requests.some(r => r.method === 'previewInput' && r.params.type === 'key' && r.params.key === 'Enter') && window.__remote.requests.some(r => r.method === 'previewInput' && r.params.type === 'navigate' && r.params.action === 'back'));
   await page.evaluate(() => document.querySelector('[data-view="create"]').click());
+  assert.equal(await page.locator('#create-providers [role=radio]').count(),3);assert.equal(await page.locator('#create-providers svg').count(),3);await page.screenshot({path:path.join(root,'artifacts/mobile-polish/new-conversation-390x844.png')});
+  await page.getByRole('radio',{name:'Claude Code',exact:true}).click();assert.equal(await page.locator('#create-provider').inputValue(),'claude');assert.equal(await page.locator('#account-field').isVisible(),false);await page.getByRole('radio',{name:'Codex',exact:true}).click();
   await page.getByRole('button', { name: 'Create terminal' }).click();
   await page.waitForFunction(() => window.__remote.requests.some(r => r.method === 'create' && r.params.projectId === 'p1' && r.params.provider === 'codex' && r.params.accountId === 'default'));
   await page.evaluate(() => document.querySelector('[data-view="settings"]').click());
-  await page.getByRole('button', { name: 'Home screen instructions' }).waitFor();
+  await page.getByRole('button', { name: 'Home screen instructions' }).waitFor();await page.screenshot({path:path.join(root,'artifacts/mobile-polish/settings-design-390x844.png')});
   const sw = await page.evaluate(async () => !!(await navigator.serviceWorker.ready));
   assert.equal(sw, true);
   await page.evaluate(() => document.querySelector('[data-view="accounts"]').click());
-  await page.getByText('Add accounts and sign in on your Mac.', { exact: false }).waitFor();
+  await page.getByText('Add accounts and sign in on your Mac.', { exact: false }).waitFor();await page.screenshot({path:path.join(root,'artifacts/mobile-polish/accounts-design-390x844.png')});
   const writesBeforeRecovery = await page.evaluate(() => window.__remote.requests.filter(r => r.method === 'write').length);
   await page.evaluate(() => {
     document.querySelector('#terminal-message').value='unsent phone draft';
@@ -365,16 +399,18 @@ try {
   await page.locator('[data-filter="attention"]').click();assert.equal(await page.locator('#live-list .session-row').count(),1);
   await page.locator('[data-filter="open"]').click();await page.locator('#live-search').fill('guitar');assert.equal(await page.locator('#live-list .session-row').count(),1);await page.locator('#live-search').fill('');
   await page.screenshot({path:path.join(root,'artifacts/mobile-polish/live-workspace-390x844.png'),fullPage:true});
-  await page.locator('#live-list [data-terminal-id="m1"]').click();await page.locator('#terminal-message').fill('guitar draft');await page.locator('#terminal-switcher').selectOption('m2');assert.equal(await page.locator('#terminal-message').inputValue(),'');await page.locator('#terminal-message').fill('other draft');await page.locator('#terminal-switcher').selectOption('m1');assert.equal(await page.locator('#terminal-message').inputValue(),'guitar draft');
-  await page.getByRole('button',{name:'Rename conversation',exact:true}).click();await page.locator('#rename-input').fill('guitar solo');await page.locator('#rename-form button[type=submit]').click();await page.getByRole('heading',{name:'guitar solo',exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.__mobileState.terminals.find(t=>t.id==='m2').title),'Other task');
-  await page.getByRole('switch',{name:'Auto approve permission requests'}).click();await page.waitForFunction(()=>document.querySelector('#terminal-auto').getAttribute('aria-checked')==='true');
+  await page.locator('#live-list [data-terminal-id="m1"]').click();await page.locator('#terminal-message').fill('guitar draft');if(!(await page.locator('#terminal-options').evaluate(el=>el.open)))await page.locator('#terminal-options summary').click();await page.locator('#terminal-switcher').selectOption('m2');assert.equal(await page.locator('#terminal-message').inputValue(),'');await page.locator('#terminal-message').fill('other draft');if(!(await page.locator('#terminal-options').evaluate(el=>el.open)))await page.locator('#terminal-options summary').click();await page.locator('#terminal-switcher').selectOption('m1');assert.equal(await page.locator('#terminal-message').inputValue(),'guitar draft');
+  if(!(await page.locator('#terminal-options').evaluate(el=>el.open)))await page.locator('#terminal-options summary').click();await page.getByRole('button',{name:'Rename conversation',exact:true}).click();await page.locator('#rename-input').fill('guitar solo');await page.locator('#rename-form button[type=submit]').click();await page.getByRole('heading',{name:'guitar solo',exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.__mobileState.terminals.find(t=>t.id==='m2').title),'Other task');
+  if(!(await page.locator('#terminal-options').evaluate(el=>el.open)))await page.locator('#terminal-options summary').click();await page.getByRole('switch',{name:'Auto approve permission requests'}).click();await page.waitForFunction(()=>document.querySelector('#terminal-auto').getAttribute('aria-checked')==='true');
   await page.locator('#toast').evaluate(node=>node.hidden=true);await page.screenshot({path:path.join(root,'artifacts/mobile-polish/session-controls-390x844.png'),fullPage:true});
+  if(!(await page.locator('#tabbar').isVisible()))await page.getByRole('button',{name:'Back to terminals',exact:true}).click();
   await page.locator('[data-view="projects"]').click();assert.equal(await page.locator('[data-project-id="p1"] .status-working small').textContent(),'2');assert.equal(await page.locator('[data-project-id="p1"] .status-attention small').textContent(),'2');assert.equal(await page.locator('[data-project-id="p1"] .open-count').textContent(),'4');await page.locator('#project-search').fill('other task');assert.equal(await page.locator('#project-list .session-row').count(),1);await page.locator('#project-search').fill('');
   await page.locator('#toast').evaluate(node=>node.hidden=true);await page.screenshot({path:path.join(root,'artifacts/mobile-polish/project-status-390x844.png'),fullPage:true});
   await page.locator('[data-project-id="p1"]').click();assert.equal(await page.locator('[data-project-id="p1"]').getAttribute('aria-expanded'),'false');await page.evaluate(()=>window.__remote.events.get('state')(structuredClone(window.__mobileState)));assert.equal(await page.locator('[data-project-id="p1"]').getAttribute('aria-expanded'),'false');await page.locator('[data-project-id="p1"]').click();
-  await page.locator('#project-list [data-terminal-id="m1"]').click();await page.getByRole('button',{name:'Preview',exact:true}).click();await page.evaluate(()=>{window.__mobileState.terminals=window.__mobileState.terminals.filter(t=>t.id!=='m1');window.__remote.events.get('state')(structuredClone(window.__mobileState));});await page.getByRole('heading',{name:'Live terminals'}).waitFor();assert.equal(await page.locator('#preview-view').isVisible(),false,'Removing preview session returns to overview');
+  await page.locator('#project-list [data-terminal-id="m1"]').click();if(!(await page.locator('#terminal-options').evaluate(el=>el.open)))await page.locator('#terminal-options summary').click();await page.getByRole('button',{name:'Preview',exact:true}).click();await page.evaluate(()=>{window.__mobileState.terminals=window.__mobileState.terminals.filter(t=>t.id!=='m1');window.__remote.events.get('state')(structuredClone(window.__mobileState));});await page.getByRole('heading',{name:'Live terminals'}).waitFor();assert.equal(await page.locator('#preview-view').isVisible(),false,'Removing preview session returns to overview');
   await page.setViewportSize({width:320,height:740});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.setViewportSize({width:768,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   await page.evaluate(()=>window.__remote.statusCallback({connected:false}));
+  if(!(await page.locator('#tabbar').isVisible()))await page.getByRole('button',{name:'Back to terminals',exact:true}).click();
   await page.locator('[data-view="projects"]').click();assert.equal(await page.locator('.project-new').first().isDisabled(),true);
   await page.locator('[data-view="create"]').click();assert.equal(await page.locator('#create-form button[type="submit"]').isDisabled(),true);
   await context.close();

@@ -5,6 +5,7 @@ const path=require('node:path');
 const pty=require('node-pty');
 const {launchSpec,detectLocalURL}=require('./validation.cjs');
 const {stopTree}=require('./processes.cjs');
+const {TerminalPalette}=require('./terminal-palette.cjs');
 class TerminalManager extends EventEmitter {
  constructor({env,executables={},shell='/bin/zsh',accounts,githubAccounts,claudeBridge,approvalBridge}){super();this.env=env;this.accounts=accounts;this.githubAccounts=githubAccounts;this.claudeBridge=claudeBridge;this.approvalBridge=approvalBridge;this.executables=executables;this.shell=shell;this.sessions=new Map();}
  metadata(s){return {id:s.id,restoredFromId:s.restoredFromId,projectId:s.projectId,provider:s.provider,conversationId:s.conversationId,title:s.title,status:s.status,activity:s.activity,working:s.status==='running'&&!!s.working,completionPending:!!s.completionPending,completionReason:s.completionReason,previewURL:s.previewURL,previewAvailable:!!s.previewAvailable,createdAt:s.createdAt,exitCode:s.exitCode,accountId:s.accountId,githubAccountId:s.githubAccountId,workingDirectory:s.workingDirectory,continuation:s.continuation||false,usage:s.usage,contextPending:!!s.pendingContext,approvalsCapable:!!s.approvalsCapable,autoApprove:this.approvalBridge?.autoApproveEnabled?.(s.id)||false,cols:s.cols,rows:s.rows};}
@@ -21,7 +22,8 @@ class TerminalManager extends EventEmitter {
   const terminalCols=Math.max(2,Math.min(500,Number(cols)||90)),terminalRows=Math.max(2,Math.min(300,Number(rows)||24));const child=pty.spawn(spec.file,spec.args,{cwd:workingDirectory,env,name:'xterm-256color',cols:terminalCols,rows:terminalRows});
   const s={id,githubAccountId,cols:terminalCols,rows:terminalRows,accountId:provider==='codex'?accountId:null,continuation,projectId:project.id,provider,conversationId,workingDirectory,approvalsCapable,title:title||({shell:'Project shell',codex:'Codex conversation',claude:'Claude conversation'}[provider]),status:'running',previewURL:'',previewAvailable:false,createdAt:new Date().toISOString(),buffer:'',outputOffset:0,scanTail:'',child};
   this.sessions.set(s.id,s);
-  child.onData(data=>{s.buffer=(s.buffer+data).slice(-1024*1024);s.outputOffset+=data.length;s.scanTail=(s.scanTail+data).slice(-4096);const url=detectLocalURL(s.scanTail);if(url&&url!==s.previewURL){s.detectedURL=url;s.previewURL=url;this.emit('changed',this.list());}this.emit('data',{id:s.id,data,offset:s.outputOffset});});
+  const palette=new TerminalPalette(reply=>child.write(reply));
+  child.onData(raw=>{const data=palette.consume(raw);if(!data)return;s.buffer=(s.buffer+data).slice(-1024*1024);s.outputOffset+=data.length;s.scanTail=(s.scanTail+data).slice(-4096);const url=detectLocalURL(s.scanTail);if(url&&url!==s.previewURL){s.detectedURL=url;s.previewURL=url;this.emit('changed',this.list());}this.emit('data',{id:s.id,data,offset:s.outputOffset});});
   child.onExit(({exitCode})=>{s.status='exited';s.exitCode=exitCode;if(this.approvalBridge?.removeTerminal)this.approvalBridge.removeTerminal(s.id);this.emit('changed',this.list());});this.emit('changed',this.list());return this.metadata(s);
  }
  write(id,data){const s=this.sessions.get(id);if(!s||s.status!=='running')throw Error('This terminal has exited. Start another terminal to continue.');if(typeof data!=='string'||data.length>1024*1024)throw Error('Invalid terminal input.');s.child.write(data);if(/[\r\n]/.test(data)&&s.provider!=='shell')s.hasSubmittedInput=true;if(data.includes('\x03'))this.setActivity(id,'waiting');}

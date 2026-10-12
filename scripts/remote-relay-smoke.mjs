@@ -27,6 +27,7 @@ try{
  child=spawn('wrangler',['dev','--local','--ip','127.0.0.1','--port',String(port),'--var',`REGISTRATION_TOKEN:${token}`,'--persist-to',path.join(temp,'persist')],{cwd:relayDir,stdio:['ignore','pipe','pipe'],env:{...process.env,NO_UPDATE_NOTIFIER:'1'}});
  await waitForOutput(child,/Ready on|Listening on|http:\/\/127\.0\.0\.1:/);
  const base=`http://127.0.0.1:${port}`;
+ for(const asset of ['/','/styles.css','/mobile.js','/sw.js']){const response=await fetch(base+asset,{headers:{'if-none-match':'old-design'}});assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');assert.equal(response.headers.get('cloudflare-cdn-cache-control'),'no-store');}
  const rejected=await fetch(`${base}/api/hosts`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({registrationToken:'wrong'})});assert.equal(rejected.status,401,'enrollment must reject an invalid registration token');
  const foreignOrigin=await fetch(`${base}/api/hosts`,{method:'POST',headers:{'content-type':'application/json',origin:'https://invalid.example'},body:JSON.stringify({registrationToken:token})});assert.equal(foreignOrigin.status,403,'Worker must reject a foreign browser origin');
  const missingApi=await fetch(`${base}/api/does-not-exist`);assert.equal(missingApi.status,404,'API paths must reach the Worker before the SPA asset fallback');

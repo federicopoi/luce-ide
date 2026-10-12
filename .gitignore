@@ -16,3 +16,16 @@ artifacts/
 .env.*
 *.pem
 *.key
+*.p12
+*.pfx
+*.keychain
+*.keychain-db
+auth.json
+workspace.json
+accounts.json
+github-accounts.json
+remote-bootstrap.json
+remote-host.json
+.codex/
+.claude/
+.agents/

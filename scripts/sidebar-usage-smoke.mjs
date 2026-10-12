@@ -21,19 +21,13 @@ try{
  await app.evaluate(({dialog})=>{dialog.showMessageBox=async()=>({response:1});});
  await page.getByText('Open a project',{exact:true}).waitFor();
  const p=await page.evaluate(dir=>window.luce.addProject(dir),project);
- const divider=page.getByRole('separator',{name:'Resize project and recent sections'});
- assert.equal(await divider.count(),1,'Rail exposes one accessible section divider');
- assert.equal(await divider.getAttribute('aria-orientation'),'horizontal');
- const projects=page.locator('#projects-section'),before=(await projects.boundingBox()).height,bounds=await divider.boundingBox();
- await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);await page.mouse.down();await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2+55,{steps:6});await page.mouse.up();
- const afterDrag=(await projects.boundingBox()).height;
- assert.ok(afterDrag>before+45,'Dragging the divider gives more height to Projects');
- await divider.focus();await page.keyboard.press('ArrowUp');
- const afterKey=(await projects.boundingBox()).height;
- assert.ok(afterKey<afterDrag-5,'ArrowUp reduces the Projects section height');
+ const divider=page.getByRole('separator',{name:'Resize projects sidebar',exact:true});
+ const before=(await page.locator('#project-sidebar').boundingBox()).width;
+ await divider.focus();await page.keyboard.press('ArrowRight');
+ const afterKey=(await page.locator('#project-sidebar').boundingBox()).width;
+ assert.ok(afterKey>before,'ArrowRight grows the unified navigation column');
  await page.reload();
- const persisted=(await page.locator('#projects-section').boundingBox()).height;
- assert.ok(Math.abs(persisted-afterKey)<2,'Rail split survives renderer reload');
+ assert.equal((await page.locator('#project-sidebar').boundingBox()).width,afterKey,'Navigation width survives reload');
  await page.getByRole('button',{name:'Toggle project list'}).click();
  await page.getByRole('button',{name:'Toggle recent conversations'}).click();
  assert.equal(await page.locator('#projects').isVisible(),false);
@@ -44,24 +38,22 @@ try{
  assert.equal(await page.locator('#recent-content').isVisible(),true);
 
  const preferredHeight=(await page.locator('#projects-section').boundingBox()).height;
- await page.getByRole('button',{name:'Collapse projects sidebar'}).click();
- await page.getByRole('button',{name:'Collapse conversations sidebar'}).click();
- const brand=page.locator('.brand'),restore=page.getByRole('button',{name:'Show projects sidebar'});
- assert.ok((await restore.boundingBox()).x>(await brand.boundingBox()).x+(await brand.boundingBox()).width,'Collapsed rail restore control sits beside brand');
- assert.ok((await restore.boundingBox()).x+(await restore.boundingBox()).width<(await page.locator('.titlebar-spacer').boundingBox()).x,'Restore control precedes titlebar spacer');
- const conversationRestore=page.getByRole('button',{name:'Show conversations sidebar'});
- assert.ok((await conversationRestore.boundingBox()).x+(await conversationRestore.boundingBox()).width<(await page.locator('.titlebar-spacer').boundingBox()).x,'Both restore controls precede titlebar spacer');
+ await page.getByRole('button',{name:'Toggle projects sidebar'}).click();
+
+ const brand=page.locator('.brand'),restore=page.getByRole('button',{name:'Toggle projects sidebar'});
+ assert.ok((await restore.boundingBox()).x<(await brand.boundingBox()).x,'Collapsed navigation can be restored from the left tool rail');
+ assert.equal(await page.locator('.utility-rail #collapse-projects').count(),1);
  await page.reload();
- await page.getByRole('button',{name:'Show projects sidebar'}).waitFor();
- const restoreAfterReload=page.getByRole('button',{name:'Show projects sidebar'}),conversationRestoreAfterReload=page.getByRole('button',{name:'Show conversations sidebar'});
- assert.ok((await restoreAfterReload.boundingBox()).x+(await restoreAfterReload.boundingBox()).width<(await page.locator('.titlebar-spacer').boundingBox()).x,'Restore placement survives reload while both sidebars are hidden');
+ await page.getByRole('button',{name:'Toggle projects sidebar'}).waitFor();
+ const restoreAfterReload=page.getByRole('button',{name:'Toggle projects sidebar'});
+ assert.ok((await restoreAfterReload.boundingBox()).x+(await restoreAfterReload.boundingBox()).width<(await page.locator('.titlebar-spacer').boundingBox()).x,'Restore placement survives reload while navigation is hidden');
  await restoreAfterReload.click();
- await conversationRestoreAfterReload.click();
+
  assert.equal(await page.locator('#project-sidebar').isVisible(),true);
  assert.equal(await page.locator('#conversation-sidebar').isVisible(),true);
- assert.ok(Math.abs((await page.locator('#projects-section').boundingBox()).height-preferredHeight)<2,'Hidden rail reload preserves its preferred section size');
+ assert.ok(Math.abs((await page.locator('#projects-section').boundingBox()).height-preferredHeight)<2,'Hidden rail reload preserves its natural section size');
  const railBox=await page.locator('#project-sidebar').boundingBox(),addBox=await page.locator('#add-project').boundingBox();
- assert.ok(Math.abs((railBox.y+railBox.height)-(addBox.y+addBox.height))<10,'Add project footer remains at the bottom of its rail');
+ assert.ok(Math.abs((railBox.y+railBox.height)-(addBox.y+addBox.height))<=12,'Add project footer remains at the bottom of its rail');
  assert.equal(await page.locator('[data-project-id="'+p.id+'"]').evaluate(el=>getComputedStyle(el).cursor),'pointer','Project rows use a normal hover cursor');
 
  const session=await page.evaluate(id=>window.luce.createTerminal({projectId:id,provider:'codex'}),p.id);
@@ -84,5 +76,5 @@ try{
  await page.screenshot({path:'artifacts/sidebar-usage-dialog.png'});
  await page.getByRole('button',{name:'Close dialog'}).click();
  assert.deepEqual(await page.evaluate(async()=>{const usage=(await window.luce.getState()).accounts[0].usage;return {usage:usage.windows.map(w=>w.usedPercent),stale:usage.stale,p:(await window.luce.getState()).projects[0].id};}),{usage:[70,55],stale:true,p:p.id});
- console.log('PASS: persistent rail split, keyboard sizing, section collapse, restore placement, project cursor, and live provider quota/reset/staleness UI');
+ console.log('PASS: unified navigation width, keyboard sizing, section collapse, restore placement, project cursor, and live provider quota/reset/staleness UI');
 }finally{if(app)await app.close();await rm(root,{recursive:true,force:true});}

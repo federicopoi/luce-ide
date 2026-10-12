@@ -10,6 +10,37 @@ const {claudePermission}=require('../src/main/claude-permission-bridge.cjs');
 const {CodexTerminalBridge}=require('../src/main/codex-terminal-bridge.cjs');
 function temp(t){const directory=fs.mkdtempSync(path.join(os.tmpdir(),'luce-approvals-'));t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));return directory;}
 const jsonrpc=(method,id,params={})=>({method,id,params});
+function isolatedCodexEnvironment(profile){
+ fs.mkdirSync(profile,{recursive:true,mode:0o700});
+ // CODEX_HOME alone does not exclude the CLI's shared OS credential store.
+ fs.writeFileSync(path.join(profile,'config.toml'),'cli_auth_credentials_store = "file"\n',{mode:0o600});
+ const env={...process.env,CODEX_HOME:profile};
+ for(const key of ['OPENAI_API_KEY','OPENAI_ACCESS_TOKEN','CODEX_API_KEY','OPENAI_BASE_URL','CHATGPT_BASE_URL'])delete env[key];
+ return env;
+}
+async function assertCodexSignedOut(file,env){
+ const {CodexClient}=require('../src/main/codex-client.cjs');const client=new CodexClient({file,env,args:['--no-daemon']});
+ try{await client.ready();const result=await client.request('account/read',{refreshToken:false});assert.equal(result.account===null,true,'The isolated test profile must not use any existing login');}
+ finally{await client.dispose();}
+}
+
+test('broker survives malformed HTTP targets and JSON bodies without leaking handler errors',async t=>{
+ const service=new ApprovalService({directory:temp(t)});await service.start();t.after(()=>service.close());
+ const launched=service.launchOptions('malformed-fixture',{directory:'/tmp'},{provider:'codex',file:'/fixture',env:{}});
+ const token=launched.env.LUCE_APPROVAL_TOKEN;
+ async function request(target,body='',authenticated=false){return new Promise((resolve,reject)=>{
+  const socket=require('node:net').connect(new URL(service.baseURL).port,'127.0.0.1');let response='';
+  socket.setTimeout(1000,()=>socket.destroy(Error('Broker did not respond')));socket.on('error',reject);socket.on('data',data=>response+=data);socket.on('end',()=>resolve(response));
+  socket.on('connect',()=>socket.end(`POST ${target} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n${authenticated?`Authorization: Bearer ${token}\r\n`:''}Content-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`));
+ });}
+ assert.match(await request('http://['),/^HTTP\/1\.1 (400|404) /,'Unauthenticated malformed targets receive a bounded error');
+ assert.match(await request('http://[','{}',true),/^HTTP\/1\.1 400 /);
+ for(const body of ['null','[]','"string"'])assert.match(await request('/codex/register',body,true),/^HTTP\/1\.1 400 /);
+ const original=service.registerRequest;service.registerRequest=()=>{throw Error('private-handler-detail');};
+ const failure=await request('/codex/register',JSON.stringify({terminalId:'malformed-fixture',requestId:1,params:{}}),true);
+ assert.match(failure,/^HTTP\/1\.1 500 /);assert.doesNotMatch(failure,/private-handler-detail/);service.registerRequest=original;
+ assert.match(await request('/unknown','{}',true),/^HTTP\/1\.1 404 /,'Broker remains available after failures');
+});
 
 test('Auto is opt-in per terminal, handles waiting requests, and resets on terminal removal',async t=>{
  const service=new ApprovalService({directory:temp(t)});await service.start();t.after(()=>service.close());
@@ -118,7 +149,7 @@ test('Codex wrapper keeps broker credentials in environment and config private',
 });
 
 test('installed Codex CLI starts with an isolated profile and remote option without inference',t=>{
- const {spawnSync}=require('node:child_process');const directory=temp(t);const result=spawnSync('codex',['--remote','unix:///tmp/luce-remote-cli-test','--help'],{env:{...process.env,CODEX_HOME:directory},encoding:'utf8',timeout:10000});if(result.error?.code==='ENOENT'){t.skip('Codex CLI is not installed');return;}assert.equal(result.status,0,result.stderr);assert.match(result.stdout,/--remote/);assert.equal(fs.existsSync(path.join(directory,'auth.json')),false);assert.equal(fs.existsSync(path.join(directory,'.auth.json')),false);
+ const {spawnSync}=require('node:child_process');const directory=temp(t);const result=spawnSync('codex',['--remote','unix:///tmp/luce-remote-cli-test','--help'],{env:isolatedCodexEnvironment(directory),encoding:'utf8',timeout:10000});if(result.error?.code==='ENOENT'){t.skip('Codex CLI is not installed');return;}assert.equal(result.status,0,result.stderr);assert.match(result.stdout,/--remote/);assert.equal(fs.existsSync(path.join(directory,'auth.json')),false);assert.equal(fs.existsSync(path.join(directory,'.auth.json')),false);
 });
 
 test('Codex fixture launches remain approvals-capable through the wrapper',t=>{
@@ -128,14 +159,16 @@ test('Codex fixture launches remain approvals-capable through the wrapper',t=>{
 
 test('owned app-server and installed Codex UI start in private CODEX_HOME without inference',async t=>{
  const {spawnSync}=require('node:child_process');const lookup=spawnSync('which',['codex'],{encoding:'utf8'});if(lookup.status!==0){t.skip('Codex CLI is not installed');return;}const directory=temp(t),profile=path.join(directory,'codex-profile');fs.mkdirSync(profile,{mode:0o700});
- const service=new ApprovalService({directory});await service.start();const manager=new TerminalManager({env:{...process.env,CODEX_HOME:profile},executables:{codex:lookup.stdout.trim()},approvalBridge:service});t.after(async()=>{await manager.dispose();await service.close();});
+ const env=isolatedCodexEnvironment(profile);await assertCodexSignedOut(lookup.stdout.trim(),env);
+ const service=new ApprovalService({directory});await service.start();const manager=new TerminalManager({env,executables:{codex:lookup.stdout.trim()},approvalBridge:service});t.after(async()=>{await manager.dispose();await service.close();});
  const session=manager.create({id:'installed-codex',directory},{provider:'codex'});const deadline=Date.now()+10000;while(Date.now()<deadline&&!manager.get(session.id).buffer.includes('Sign in with ChatGPT'))await new Promise(resolve=>setTimeout(resolve,50));
  const current=manager.get(session.id);assert.equal(current.status,'running',current.buffer);assert.match(current.buffer,/Sign in with ChatGPT/);assert.equal(fs.existsSync(path.join(profile,'auth.json')),false);assert.equal(current.approvalsCapable,true);
 });
 
 test('installed Codex UI starts with account arguments while no-daemon stays on its owned app-server',async t=>{
  const {spawnSync}=require('node:child_process');const lookup=spawnSync('which',['codex'],{encoding:'utf8'});if(lookup.status!==0){t.skip('Codex CLI is not installed');return;}const directory=temp(t),profile=path.join(directory,'codex-account');fs.mkdirSync(profile,{mode:0o700});
- const service=new ApprovalService({directory});await service.start();const accounts={environment:()=>({...process.env,CODEX_HOME:profile}),args:()=>['-c','cli_auth_credentials_store="file"']};const manager=new TerminalManager({env:{...process.env,CODEX_HOME:profile},accounts,executables:{codex:lookup.stdout.trim()},approvalBridge:service});t.after(async()=>{await manager.dispose();await service.close();});
+ const env=isolatedCodexEnvironment(profile);await assertCodexSignedOut(lookup.stdout.trim(),env);
+ const service=new ApprovalService({directory});await service.start();const accounts={environment:()=>({...env}),args:()=>['-c','cli_auth_credentials_store="file"']};const manager=new TerminalManager({env,accounts,executables:{codex:lookup.stdout.trim()},approvalBridge:service});t.after(async()=>{await manager.dispose();await service.close();});
  const session=manager.create({id:'installed-codex-account',directory},{provider:'codex'});const deadline=Date.now()+10000;while(Date.now()<deadline&&!manager.get(session.id).buffer.includes('Sign in with ChatGPT')&&manager.get(session.id).status==='running')await new Promise(resolve=>setTimeout(resolve,50));
  const current=manager.get(session.id);assert.equal(current.status,'running',current.buffer);assert.match(current.buffer,/Sign in with ChatGPT/);const bridgeConfig=JSON.parse(fs.readFileSync(path.join(directory,'remote-approvals',`${session.id}.json`),'utf8'));assert.deepEqual(bridgeConfig.args,['-c','cli_auth_credentials_store="file"']);assert.equal(bridgeConfig.serverArgs[0],'--no-daemon');assert.equal(fs.existsSync(path.join(profile,'auth.json')),false);assert.equal(current.approvalsCapable,true);
 });

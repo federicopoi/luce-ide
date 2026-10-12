@@ -2,20 +2,52 @@
 
 A local Mac workspace for project terminals, Claude Code and Codex conversations, and website previews.
 
+Luce is an independent project for Apple Silicon Macs, licensed under [MIT](LICENSE).
+Codex, Claude Code and GitHub accounts belong to each user; Luce does not include
+provider accounts, subscriptions or credentials. Claude currently uses its
+existing local login; separate account profiles are available for Codex and GitHub.
+
+Build from source with Node.js 24:
+
+```sh
+git clone https://github.com/federicopoi/luce-ide.git
+cd luce-ide
+npm ci
+npm test
+npm start
+```
+
+Install the provider CLIs you intend to use separately and authenticate with
+your own accounts. Missing providers are unavailable in the launcher; a project
+shell remains available. Start by adding a folder, then use **Accounts** to add
+Codex or GitHub profiles. Existing CLI logins remain available as the default.
+
+See [build and signing options](docs/building.md),
+[optional self-hosted phone access](docs/remote-self-hosting.md),
+[security and local data](SECURITY.md), and [contributing](CONTRIBUTING.md).
+This branch ships an explicitly unnotarized Apple Silicon beta; see [download, installation and verification](BUILD-BETA.md). Stable public releases still require a verified Developer ID signed and notarized artifact.
+Third-party licenses and provider marks are described in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
 Drag a project row above or below another project to change its order. The drop line marks the position, and the order is saved across restarts.
 
 Agent terminal headers have an **Auto** switch. It starts off in each new terminal. Enable it to accept waiting and future permission requests in that terminal; disable it to return to manual approvals. It uses the agent approval handler, never types answers into terminal input, and does not answer ordinary agent questions. Closing the terminal or restarting Luce resets Auto to off.
 
 ## Use
 
+Luce does not update Codex or Claude Code automatically on startup. Use **Settings → Update Codex and Claude** to request an update through the existing npm, Homebrew, or native Claude installation. Custom executable overrides are left untouched.
+
 Open `~/Applications/Luce.app`. Add a project folder, or choose **Find local sessions** to add a folder from your existing agent histories. Select a project in the left rail. Its live terminals and saved conversations appear beside it.
 
 - **Recent conversations:** the Projects rail shows saved conversations from all local Codex and Claude folders, newest first and grouped by date. Search by title, folder, or provider. Click to open or focus an existing terminal. Right-click **Add to project** to choose an existing project or create a named project group; you can also drag a conversation onto a project. Organization preserves the conversation’s original working folder. Discovery refreshes every 20 seconds, with a manual refresh button.
+- **Global search:** press **⌘ K** or use **Search all conversations** to search saved histories from every local folder and open sessions across projects. Match titles, folder paths, providers and Codex account names. Results show their folder and timestamp; clearing returns to the selected project. Transcript body text is not indexed by this search.
 - **New conversation:** start Codex, Claude Code, or a project shell using your installed tools. Codex uses the selected project account; Claude uses its existing login.
 - **Previous:** click a saved conversation to resume it with its original provider. Open conversations appear under Open terminals and return to Conversations when closed. Names set in Luce appear consistently in the terminal, saved history, and Recent conversations.
 - **Layouts:** use the grid button for one, two, or four terminals. Drag a divider between panes to resize them; proportions are remembered per project. A pane's menu can focus, rename, preview, or close that terminal.
-- **Preview:** click a website link in terminal output to open it in that terminal’s Luce preview. You can also run your website’s dev server. A browser icon appears in each terminal header when its detected local URL responds, or when Luce finds an HTTP server listening from that project folder. Click it to preview that terminal’s website. The icon disappears when the server stops. Use the terminal’s menu to enter a URL manually. Expand hides the sidebars; Back to terminal restores the running terminals.
-- **Collapse sidebars:** use the chevron beside Projects or the conversation heading to hide that sidebar. Restore it from the buttons beside the Luce logo. Both can be hidden for more terminal space; visibility is remembered.
+- **Files:** preview PDF pages and formatted Word (.docx) documents inside Luce (up to 25 MB), alongside text, images, video and audio. Use **Open for editing** to edit with the default app, then **Reload file preview** to see your changes. Right-click a file, folder or project path for **Show in Finder**. Drag a file into an open conversation to paste its quoted path; it stays in the input until you send it.
+- **Preview:** click a website link in terminal output to open it in that terminal’s Luce preview. You can also run your website’s dev server. A browser icon appears in each terminal header when its detected local URL responds, or when Luce finds an HTTP server listening from that project folder. Click it to preview that terminal’s website. The icon disappears when the server stops. Use the terminal’s menu to enter a URL manually. Refresh bypasses cached pages and assets while preserving website logins. Expand hides the sidebars; Back to terminal restores the running terminals.
+- **Mobile preview:** click the phone icon beside Reload to preview the site in a centered device frame. Choose a phone or tablet preset, enter a custom width and height (240–2560 CSS pixels), or rotate the device. The preview scales to fit while preserving the selected responsive viewport. Click the phone icon again for desktop mode; your choice is remembered across launches.
+- **Navigation:** projects and their conversations share one resizable sidebar. The folder/conversation icon in the slim tool rail hides or restores it; visibility and width are remembered. Right-click that icon, use Settings, or use the native View menu to choose project tabs or the project sidebar. The tool rail also contains search, phone access, project files, accounts and settings; GitHub controls appear above the workspace.
 - **Sidebar widths:** drag either vertical divider to resize Projects or Conversations. Widths are remembered. Focus a divider and use Left/Right arrows for 10px steps; double-click or press Home to reset.
 - **Sidebar sections:** drag the horizontal divider between Projects and Recent conversations to change their heights. Each section can fold independently, and the split is remembered.
 - **Project options:** rename a project or remove it from Luce without deleting its files.
@@ -35,7 +67,7 @@ New Codex conversations launch the normal CLI. They appear in saved history once
 
 Closing the window hides Luce and leaves its terminals running; reopen it from the Dock. Quit stops Luce-owned processes and asks for confirmation. After restarting the app, project preferences and saved agent conversations remain; arbitrary shell processes do not restart automatically.
 
-The rename preserves the original workspace profile at `~/Library/Application Support/Orbit`, including sidebar preferences and preview sessions. Source is available at `~/luce`, an alias of the existing `~/orbit` folder.
+The rename preserves the original workspace profile at `~/Library/Application Support/Orbit`, including sidebar preferences and preview sessions.
 
 ## Local data and current boundaries
 
@@ -43,12 +75,12 @@ Luce stores workspace metadata in `~/Library/Application Support/Orbit/workspace
 
 The preview browser is isolated from Luce's terminal/filesystem bridge. It supports HTTP and HTTPS, including localhost development servers. Browser permissions and pop-up windows are disabled in this build.
 
-This is an Apple Silicon personal test build with an ad-hoc signature, not a notarized distribution build. Shells load your existing shell configuration, so existing shell startup messages also appear inside Luce.
+This is an Apple Silicon personal build with a persistent local signing certificate. It is not a notarized distribution build. Signing identity is reused so macOS can recognize Luce across updates; see [Mac folder permissions](docs/mac-permissions.md) for the one-time setup. Shells load your existing shell configuration, so existing shell startup messages also appear inside Luce.
 
 ## Develop and rebuild
 
 ```sh
-cd ~/luce
+cd luce-ide
 npm ci
 npm test
 npm start
@@ -102,7 +134,7 @@ Provider authentication, model entitlements, and server-side restrictions still 
 
 Drag a terminal's header to another pane to move it; occupied panes swap. Switching accounts on a new Codex terminal lets you start fresh or choose a saved conversation. The small size label measures the saved conversation transcript, excluding project files; `Size —` means its transcript is not yet linked or available.
 
-Drop files from Finder onto an open terminal to paste their quoted paths. Press Escape twice within 350ms to clear the current input line (Ctrl+U); a single Escape retains its normal action after the short interval. Project badges show a gray open-terminal count and a yellow dot for Codex/Claude agents actively working (a tiny count appears when more than one is working). Waiting for an approval or answer, finishing a response, and interrupting a task clear the working count; idle agents and shells remain in the open count. Both badges appear in the sidebar and top tabs. A small green light beside the count (with a tiny count for multiple responses) means a Codex or Claude response finished while you were in another project; opening that project clears the light.
+Drop files from Finder onto an open terminal to paste their quoted paths. Press Escape twice within 350ms to clear the current input line (Ctrl+U); a single Escape retains its normal action after the short interval. Project badges show a gray open-terminal count and a blue dot for Codex/Claude agents actively working (a tiny count appears when more than one is working). Waiting for an approval or answer, finishing a response, and interrupting a task clear the working count; idle agents and shells remain in the open count. Both badges appear in the sidebar and top tabs. A small green light beside the count (with a tiny count for multiple responses) means a Codex or Claude response finished while you were in another project; opening that project clears the light.
 
 
 ## Phone control with Cloudflare
@@ -121,7 +153,7 @@ Send submits terminal text followed by Enter. The separate Enter button submits 
 
 Keep Luce open, the Mac online, and the lid open. **Keep Mac awake** prevents idle system sleep while remote access is enabled; it cannot keep an offline or powered-off Mac accessible. Push notifications are opt-in with generic messages that omit conversation content. On iPhone, install the home-screen app to enable supported web push; delivery depends on the browser/OS and Mac connectivity.
 
-The deployment lives in `relay/wrangler.toml`; build first, then use `wrangler deploy --config relay/wrangler.toml`. The private `remote-bootstrap.json` in the Mac profile contains the relay URL/enrollment secret. Do not commit it or copy it into the app. Run `npm run smoke:relay` for a real local Worker, `npm run smoke:mobile` for phone UI fixtures, and `npm run smoke:remote` for live Cloudflare + isolated Electron + real PTY + preview + Claude permission-hook integration. The last command uses the private Mac bootstrap; it neither touches your running Luce sessions nor submits model prompts. Cloudflare usage/billing depends on your plan and traffic.
+The deployment lives in `relay/wrangler.toml`; configure your own account and enrollment secret using the [self-hosting instructions](docs/remote-self-hosting.md). The private `remote-bootstrap.json` in the Mac profile contains the relay URL/enrollment secret. Do not commit it or copy it into the app. Run `npm run smoke:relay` for a real local Worker, `npm run smoke:mobile` for phone UI fixtures, and `npm run smoke:remote` for live Cloudflare + isolated Electron + real PTY + preview + Claude permission-hook integration. The last command uses your private Mac bootstrap; it neither touches your running Luce sessions nor submits model prompts. Cloudflare usage/billing depends on your plan and traffic.
 
 ## Project tabs, sound and images
 
@@ -135,7 +167,7 @@ Pasted images and temporary screenshot drops are stored as private, persistent i
 
 In the four-pane layout, click a terminal header's **Fill column** button (or choose it from ⋯) to use the empty pane above or below it. The other column keeps its two terminals and resize handle. **Restore column split** brings the empty pane back. Filling never covers an occupied pane.
 
-Luce reopens the last workspace after quitting: selected project, open saved Codex/Claude conversations and accounts, fresh shells in their working folders, terminal positions, active/focused view, website preview, sizes, column fills, and existing project/sidebar/tab preferences. Shell commands and jobs are not replayed, and Auto starts off. Missing conversations or signed-out accounts produce restore guidance while the remaining terminals reopen. Conversation content comes from provider history; unsaved shell output and partially typed input are not recovered.
+Luce reopens the last workspace after quitting: selected project, open saved Codex/Claude conversations and accounts, fresh shells in their working folders, terminal positions, active/focused view, website preview, sizes, column fills, and existing project/sidebar/tab preferences. Shell commands and jobs are not replayed, and Auto starts off. Missing conversations or signed-out accounts stay quiet while the remaining terminals reopen; saved history and restore records are retained. Conversation content comes from provider history; unsaved shell output and partially typed input are not recovered.
 
 
 ## Project files
@@ -147,3 +179,5 @@ Click a file for an in-workspace preview: text/code, images, and supported video
 Drag a file or folder from Files onto a terminal to insert its shell-quoted full path. This does not press Enter. Existing local file paths in terminal output are clickable, including relative paths and source locations such as `src/app.js:12:3`. Clicking one opens Files, expands the parent folders, selects the file, and previews it. Relative links use that terminal’s working folder.
 
 Focused terminal views are remembered per project across switching and relaunch. Agent terminals with no submitted prompt or saved history reopen fresh. If a saved conversation cannot be found, its restore record is preserved and a named notice offers **Retry** or **Dismiss** in that project’s Conversations area. Retry refreshes history and resumes the original conversation when available.
+
+Terminal font shortcuts: **⌘+** (or **⌘=**) increases text size, **⌘−** decreases it, and **⌘0** restores the default. The terminal font size is remembered across launches and applies to shell, Codex, and Claude conversations.
