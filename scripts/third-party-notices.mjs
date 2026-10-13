@@ -8,7 +8,7 @@ export async function generateNotices(root=process.cwd()){
  for(const [relative,entry] of Object.entries(lock.packages).sort(([a],[b])=>a.localeCompare(b))){
   if(!relative||entry.dev)continue;
   if(!relative.startsWith('node_modules/')||relative.split('/').includes('..'))throw Error('Invalid production dependency path.');
-  const directory=path.join(root,relative);let current=root;
+  const directory=path.join(root,relative);if(entry.optional){try{await lstat(directory);}catch(error){if(error.code==='ENOENT')continue;throw error;}}let current=root;
   for(const part of relative.split('/')){current=path.join(current,part);if((await lstat(current)).isSymbolicLink())throw Error(`Refusing a symlink in dependency notices: ${relative}`);}
   const metadata=JSON.parse(await safeFile(path.join(directory,'package.json'))),files=(await readdir(directory)).filter(name=>/^(licen[cs]e|copying|notice)([._-].*)?$/i.test(name)).sort();
   const repository=typeof metadata.repository==='string'?metadata.repository:metadata.repository?.url;
@@ -17,9 +17,12 @@ export async function generateNotices(root=process.cwd()){
    const source='https://github.com/web-push-libs/encrypted-content-encoding/blob/0562510a30819f52424724a6fd5504becacd98a1/LICENSE';
    texts.push(`### LICENSE\n\nThe npm archive omits its license file. Retrieved from its published gitHead: ${source}\n\n${licenseText(await safeFile(path.join(root,'docs/third-party/http_ece-1.2.0-LICENSE')))}`);
   }
+  if(!texts.length&&metadata.name.startsWith('@napi-rs/canvas-')){const parent=JSON.parse(await safeFile(path.join(root,'node_modules/@napi-rs/canvas/package.json')));if(parent.version===metadata.version)texts.push(`### LICENSE\n\nPlatform binary license from @napi-rs/canvas at the same version.\n\n${licenseText(await safeFile(path.join(root,'node_modules/@napi-rs/canvas/LICENSE')))}`);}
+  if(!texts.length&&metadata.name==='isarray'&&metadata.version==='1.0.0'){const readme=await safeFile(path.join(directory,'README.md'));texts.push(`### License from README.md\n\n${licenseText(readme.slice(readme.indexOf('## License')))}`);}
   if(!texts.length)throw Error(`Missing license text for ${relative}.`);
   sections.push(`## ${metadata.name}@${metadata.version}\n\nLicense: ${entry.license||metadata.license||'See license text below.'}${repository?`\n\nUpstream: ${repository}`:''}\n\n${texts.join('\n\n')}`);
  }
+ sections.push(`## Phosphor Icons 2.1.1 — bundled interface SVGs\n\nUpstream: https://github.com/phosphor-icons/core\n\n${licenseText(await safeFile(path.join(root,'assets/icons/LICENSE')))}`);
  return sections.join('\n\n---\n\n')+'\n';
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){

@@ -45,8 +45,9 @@ Open `~/Applications/Luce.app`. Add a project folder, or choose **Find local ses
 - **New conversation:** start Codex, Claude Code, or a project shell using your installed tools. Codex uses the selected project account; Claude uses its existing login.
 - **Previous:** click a saved conversation to resume it with its original provider. Open conversations appear under Open terminals and return to Conversations when closed. Names set in Luce appear consistently in the terminal, saved history, and Recent conversations.
 - **Layouts:** use the grid button for one, two, or four terminals. Drag a divider between panes to resize them; proportions are remembered per project. A pane's menu can focus, rename, preview, or close that terminal.
-- **Files:** drag a file from the Files sidebar into an open conversation to paste its quoted path. The path stays in the input until you send it.
+- **Files:** preview PDF pages and formatted Word (.docx) documents inside Luce (up to 25 MB), alongside text, images, video and audio. Use **Open for editing** to edit with the default app, then **Reload file preview** to see your changes. Right-click a file, folder or project path for **Show in Finder**. Drag a file into an open conversation to paste its quoted path; it stays in the input until you send it.
 - **Preview:** click a website link in terminal output to open it in that terminal’s Luce preview. You can also run your website’s dev server. A browser icon appears in each terminal header when its detected local URL responds, or when Luce finds an HTTP server listening from that project folder. Click it to preview that terminal’s website. The icon disappears when the server stops. Use the terminal’s menu to enter a URL manually. Refresh bypasses cached pages and assets while preserving website logins. Expand hides the sidebars; Back to terminal restores the running terminals.
+- **Mobile preview:** click the phone icon beside Reload to preview the site in a centered device frame. Choose a phone or tablet preset, enter a custom width and height (240–2560 CSS pixels), or rotate the device. The preview scales to fit while preserving the selected responsive viewport. Click the phone icon again for desktop mode; your choice is remembered across launches.
 - **Navigation:** projects and their conversations share one resizable sidebar. The folder/conversation icon in the slim tool rail hides or restores it; visibility and width are remembered. Right-click that icon, use Settings, or use the native View menu to choose project tabs or the project sidebar. The tool rail also contains search, phone access, project files, accounts and settings; GitHub controls appear above the workspace.
 - **Sidebar widths:** drag either vertical divider to resize Projects or Conversations. Widths are remembered. Focus a divider and use Left/Right arrows for 10px steps; double-click or press Home to reset.
 - **Sidebar sections:** drag the horizontal divider between Projects and Recent conversations to change their heights. Each section can fold independently, and the split is remembered.
@@ -179,3 +180,34 @@ Click a file for an in-workspace preview: text/code, images, and supported video
 Drag a file or folder from Files onto a terminal to insert its shell-quoted full path. This does not press Enter. Existing local file paths in terminal output are clickable, including relative paths and source locations such as `src/app.js:12:3`. Clicking one opens Files, expands the parent folders, selects the file, and previews it. Relative links use that terminal’s working folder.
 
 Focused terminal views are remembered per project across switching and relaunch. Agent terminals with no submitted prompt or saved history reopen fresh. If a saved conversation cannot be found, its restore record is preserved and a named notice offers **Retry** or **Dismiss** in that project’s Conversations area. Retry refreshes history and resumes the original conversation when available.
+
+Terminal font shortcuts: **⌘+** (or **⌘=**) increases text size, **⌘−** decreases it, and **⌘0** restores the default. The terminal font size is remembered across launches and applies to shell, Codex, and Claude conversations.
+
+## Optional Cloudflare accounts
+
+Enable **Settings → Cloudflare integration** to show the Cloudflare selector to
+the left of GitHub. In **Accounts → Cloudflare**, add as many named profiles as
+you need, sign in through your browser, and choose the Cloudflare account each
+profile should use. A login with access to several accounts can be used in
+several profiles. Select a profile from the project’s Cloudflare menu; Luce
+remembers that choice per project.
+
+Install Wrangler 4.71 or later separately (`npm install -g wrangler`) and restart
+Luce if it is unavailable. Luce uses Wrangler’s OAuth login in private local
+profile directories; these are not claimed to be Keychain-encrypted. Credentials
+are kept out of Luce’s public and remote state, and authentication command logs
+are discarded. Removing a profile removes its Luce metadata and project
+assignments; its local authentication files remain, as with GitHub profiles.
+
+New shells, Claude Code and Codex terminals receive the selected credentials
+and Cloudflare account ID. Open terminals keep their original credentials;
+start a new terminal if an OAuth token expires. Close a profile’s terminals
+before changing its account, signing in again, or removing it. Existing setup
+keeps your normal environment. Disabling the integration hides its UI and stops
+applying managed credentials to new terminals, while retaining saved profiles
+and project selections.
+
+The selector supplies credentials and a default account for Wrangler commands.
+Explicit account IDs in repository configuration, scripts, or commands may
+override that target; check those before deploying. Luce does not rewrite your
+Wrangler configuration or automatically deploy a project.

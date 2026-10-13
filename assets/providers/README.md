@@ -1,6 +1,6 @@
 Provider marks are bundled locally for the desktop interface.
 
-- Codex cloud/terminal mark: inline SVG from https://developers.openai.com/codex/ (retrieved 2026-10-04).
+- OpenAI/ChatGPT Blossom (used for Codex): preserved SVG geometry from https://github.com/simple-icons/simple-icons/blob/13.21.0/icons/openai.svg (retrieved 2026-10-08). Brand reference: https://openai.com/brand/.
 - Claude starburst: mark path from the Claude wordmark at https://claude.com/ (retrieved 2026-10-04).
 
 The original geometry is preserved. Icons inherit the surrounding text color.

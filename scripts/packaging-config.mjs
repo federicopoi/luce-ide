@@ -25,7 +25,7 @@ export function payloadFilter(lock){
   if(name==='src'||name==='src/main'||name==='src/shared')return true;
   if(name.startsWith('src/main/')||name.startsWith('src/shared/'))return /\.(?:cjs|mjs|js)$/.test(name);
   if(name==='dist')return true;
-  if(name.startsWith('dist/'))return parts.slice(1).every(part=>!developmentDirectories.has(part))&&(!path.posix.extname(name)||/\.(?:js|css|html|png|svg|ico|webmanifest|wasm|woff2?|ttf)$/.test(name));
+  if(name.startsWith('dist/'))return parts.slice(1).every(part=>!developmentDirectories.has(part))&&(!path.posix.extname(name)||/\.(?:js|mjs|css|html|png|svg|ico|webmanifest|wasm|woff2?|ttf)$/.test(name));
   if(name==='assets')return true;
   if(name.startsWith('assets/')){const asset=name.slice(7);return assets.has(asset)||[...assets].some(file=>file.startsWith(asset+'/'));}
   return false;

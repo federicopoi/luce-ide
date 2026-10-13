@@ -1,0 +1,3 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');
+test('menus use measured width and flip above the anchor near a window edge',async()=>{const {placeFloating}=await import('../src/renderer/floating-ui.js');const pos=placeFloating({left:960,top:650,bottom:680},{width:360,height:240},{width:1024,height:720});assert.equal(pos.left,656);assert.equal(pos.top,404);});
+test('oversized and offscreen anchors never produce negative menu coordinates',async()=>{const {placeFloating}=await import('../src/renderer/floating-ui.js');const pos=placeFloating({left:-100,top:10,bottom:40},{width:900,height:600},{width:320,height:240});assert.deepEqual(pos,{left:8,top:8});});

@@ -1,0 +1,44 @@
+// Phosphor Icons 2.1.1, regular weight. MIT; see assets/icons/LICENSE.
+import svg0 from '../../assets/icons/arrow-clockwise.svg';
+import svg1 from '../../assets/icons/arrow-left.svg';
+import svg2 from '../../assets/icons/arrow-right.svg';
+import svg3 from '../../assets/icons/arrow-up-right.svg';
+import svg4 from '../../assets/icons/arrows-in-simple.svg';
+import svg5 from '../../assets/icons/arrows-out-simple.svg';
+import svg6 from '../../assets/icons/bell.svg';
+import svg7 from '../../assets/icons/caret-down.svg';
+import svg8 from '../../assets/icons/caret-right.svg';
+import svg9 from '../../assets/icons/chat-circle-text.svg';
+import svg10 from '../../assets/icons/check.svg';
+import svg11 from '../../assets/icons/clock-counter-clockwise.svg';
+import svg12 from '../../assets/icons/copy-simple.svg';
+import svg13 from '../../assets/icons/desktop.svg';
+import svg14 from '../../assets/icons/device-mobile.svg';
+import svg15 from '../../assets/icons/dots-three.svg';
+import svg16 from '../../assets/icons/eye.svg';
+import svg17 from '../../assets/icons/eye-slash.svg';
+import svg18 from '../../assets/icons/file.svg';
+import svg19 from '../../assets/icons/file-code.svg';
+import svg20 from '../../assets/icons/film-strip.svg';
+import svg21 from '../../assets/icons/folder-simple.svg';
+import svg22 from '../../assets/icons/gear-six.svg';
+import svg23 from '../../assets/icons/globe-simple.svg';
+import svg24 from '../../assets/icons/image-square.svg';
+import svg25 from '../../assets/icons/magnifying-glass.svg';
+import svg26 from '../../assets/icons/paper-plane-tilt.svg';
+import svg27 from '../../assets/icons/pencil-simple.svg';
+import svg28 from '../../assets/icons/plus.svg';
+import svg29 from '../../assets/icons/shield-check.svg';
+import svg30 from '../../assets/icons/sidebar-simple.svg';
+import svg31 from '../../assets/icons/squares-four.svg';
+import svg32 from '../../assets/icons/stop-circle.svg';
+import svg33 from '../../assets/icons/tabs.svg';
+import svg34 from '../../assets/icons/terminal-window.svg';
+import svg35 from '../../assets/icons/trash-simple.svg';
+import svg36 from '../../assets/icons/user-circle.svg';
+import svg37 from '../../assets/icons/x.svg';
+import github from '../../assets/icons/git-branch.svg';
+import cloudflare from '../../assets/icons/cloudflare.svg';
+const icons={cloudflare,github,'search':svg25,'folder':svg21,'shell':svg34,'history':svg11,'globe':svg23,'reload':svg0,'refresh':svg0,'expand':svg5,'restore':svg4,'layout':svg31,'close':svg37,'check':svg10,'settings':svg22,'phone':svg14,'accounts':svg36,'conversation':svg9,'file':svg18,'image':svg24,'video':svg20,'code':svg19,'eye':svg16,'eye-off':svg17,'chevron-right':svg8,'chevron-down':svg7,'plus':svg28,'more':svg15,'back':svg1,'forward':svg2,'external':svg3,'copy':svg12,'edit':svg27,'tabs':svg33,'sidebar':svg30,'desktop':svg13,'send':svg26,'stop':svg32,'trash':svg35,'bell':svg6,'shield':svg29};
+export function icon(name){const svg=icons[name];if(!svg)throw new Error(`Unknown interface icon: ${name}`);return svg.replace('<svg ','<svg class="luce-icon" aria-hidden="true" focusable="false" ');}
+export function mountIcons(root=document){for(const element of root.querySelectorAll('[data-icon]'))element.innerHTML=icon(element.dataset.icon);}

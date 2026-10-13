@@ -2,6 +2,7 @@ import {build} from 'esbuild';
 import {mkdir,copyFile,readFile,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 await mkdir('dist',{recursive:true});
+await copyFile('node_modules/pdfjs-dist/build/pdf.worker.mjs','dist/pdf.worker.mjs');
 await build({entryPoints:['src/renderer/app.js'],bundle:true,outfile:'dist/app.js',platform:'browser',format:'iife',target:'chrome140',minify:false,loader:{'.svg':'text'}});
 await copyFile('src/renderer/index.html','dist/index.html');await copyFile('src/renderer/styles.css','dist/styles.css');
 await copyFile('src/renderer/theme.css','dist/theme.css');
