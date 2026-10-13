@@ -43,7 +43,7 @@ class Store {
   const project=this.state.projects.find(p=>p.id===id);if(!project)throw Error('Project not found.');
   if(patch.layout!==undefined&&![1,2,4].includes(patch.layout))throw Error('Choose a one, two or four terminal layout.');
   if(patch.name!==undefined){if(typeof patch.name!=='string'||!patch.name.trim())throw Error('Enter a project name.');project.name=patch.name.trim().slice(0,80);}
-  for(const key of ['layout','previewURL','conversationNames','codexAccountId','githubAccountId'])if(patch[key]!==undefined)project[key]=patch[key];
+  for(const key of ['layout','previewURL','conversationNames','codexAccountId','githubAccountId','cloudflareAccountId'])if(patch[key]!==undefined)project[key]=patch[key];
   this.save();return structuredClone(project);
  }
  moveProject(id,targetId,after=false){
