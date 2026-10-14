@@ -1,12 +1,18 @@
-# Enable GitHub source checks
+# GitHub source checks
 
-The prepared workflow is stored in `docs/ci/checks.yml`. The current GitHub
-OAuth login cannot push files under `.github/workflows` without the `workflow`
-scope, so automatic checks are not enabled by this branch.
+The active workflow is `.github/workflows/checks.yml`. A copy is retained in
+`checks.yml` here for reference. It runs on pull requests and pushes to `main`.
 
-To enable them, use GitHub's web editor to create `.github/workflows/checks.yml`
-with this template, or authorize a GitHub credential with workflow write access
-and move the file there. The workflow runs on pushes and pull requests, uses
-Node 24 on macOS for tests/build/license/dependency checks, and scans the full
-repository history with checksum-pinned Gitleaks on Linux. It needs no project
-secrets and has read-only repository permissions.
+- **Test and build:** Node.js 24 on macOS, tests, renderer build, dependency
+  notices, and an npm audit at high severity.
+- **Secret scan:** checksum-pinned Gitleaks on Linux, scanning complete Git
+  history with redacted output. One exact historical release-manifest file hash
+  is excluded in `.gitleaksignore`; no credential rule is disabled.
+
+The workflow uses pinned action commits, read-only repository permissions,
+and no application or deployment credentials. Fork PRs use `pull_request`;
+no `pull_request_target` workflow runs contributor code. First-time contributor
+workflow runs may require maintainer approval.
+
+`main` requires these checks and the maintainer's code-owner approval for
+contributor changes. Keep required check names consistent with the workflow.

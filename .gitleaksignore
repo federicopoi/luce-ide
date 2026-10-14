@@ -1,0 +1,3 @@
+# Verified SHA-256 file checksum in the historical release source manifest.
+# Exclude only this exact finding, not the file or generic API-key rule.
+6d5e2e1b62fb3a996421854c770fa730f433f637:RELEASE-SOURCE.json:generic-api-key:102

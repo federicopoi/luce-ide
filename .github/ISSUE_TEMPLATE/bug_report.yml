@@ -1,0 +1,36 @@
+name: Bug report
+description: Report a reproducible problem in Luce.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Use private reporting in SECURITY.md for security vulnerabilities. Never attach tokens, pairing links, conversations, or a complete Luce profile."
+  - type: input
+    id: version
+    attributes:
+      label: Luce version or commit
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and architecture
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or screenshots
+      description: Remove credentials, account details, and private project or conversation content.

@@ -1,11 +1,10 @@
 # Security and local data
 
 Please report suspected vulnerabilities privately using GitHub's **Report a
-vulnerability** feature when available. Otherwise contact the maintainers
-privately before posting reproduction details. Never attach credentials,
+vulnerability** feature on this repository. Never attach credentials,
 pairing links, conversation transcripts, or an entire application profile to
-an issue. Maintainers should enable private vulnerability reporting before
-making this repository public.
+an issue. Use [private reporting](https://github.com/federicopoi/luce-ide/security/advisories/new)
+instead of a public issue for vulnerability details.
 
 Luce runs installed provider CLIs and shell commands with your Mac user's
 permissions. Choose trusted project folders and review commands and agent

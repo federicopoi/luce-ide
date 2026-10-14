@@ -1,9 +1,17 @@
 name: Source checks
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: source-checks-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
   test:
+    name: Test and build
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
@@ -20,6 +28,7 @@ jobs:
       - run: npm run notices:check
       - run: npm audit --audit-level=high
   secrets:
+    name: Secret scan
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

@@ -1,65 +1,31 @@
-# Public source readiness — 2026-10-07
+# Public source readiness
 
-This preparation targets a source-code beta for Apple Silicon Macs. It does
-not establish that a public, notarized download is ready.
+Luce is an MIT-licensed source project for Apple Silicon Macs. Community
+contributions, including Windows support, are welcome through reviewed PRs.
+Windows support is not yet part of a supported release.
 
-## Audit and fixes
+## Repository safeguards
 
-- Gitleaks 8.30.1 scanned all 26 pre-existing commits across local refs:
-  no detected secrets. A separate historical-path check found no tracked
-  authentication files, workspace/account databases, relay bootstrap files,
-  signing keys or keychains. Existing history includes maintainer paths and
-  public deployment identifiers; these are not authentication secrets.
-- Both production-only and complete npm dependency audits reported zero
-  known vulnerabilities at the time of this check.
-- Packaging now stages an explicit runtime payload instead of copying the
-  repository with an exclusion list. Hidden/private files, symlinks,
-  development dependencies and unsupported PTY prebuilds are excluded.
-  Installed Electron is resolved and checked against the lockfile explicitly.
-- Codex reauthentication cannot replace an account under active terminals
-  or transfers. A durable pending-login guard survives concurrent account
-  refreshes, cancellation failures and early completion events. Public
-  account refresh results omit transient login identifiers and browser URLs.
-- The local approval service authenticates before URL parsing, validates
-  request-body objects, and catches async failures without exposing exception
-  details or stopping the service.
-- The source has an MIT license, full production dependency notices, provider
-  mark attribution, security/contribution guidance and checksum-pinned secret
-  scanning in a prepared CI template. GitHub rejected workflow writes with
-  the current OAuth scope; automatic checks still need enabling using
-  docs/ci/README.md. The npm archive for http_ece omitted its license; its notice
-  was retrieved from that version's published upstream source commit.
-- Relay deployment uses the administrator's own Cloudflare account. Private
-  enrollment/bootstrap setup is documented and never bundled in the app.
+- The current source and reachable Git history are scanned with Gitleaks.
+  The historical exception in `.gitleaksignore` is a verified SHA-256 source-file
+  checksum, not a credential.
+- Local account profiles, relay credentials, signing material, conversation
+  data, attachments, and build outputs are excluded by `.gitignore` and the
+  packaging allowlist. Each user supplies their own accounts.
+- Internal development ledgers and planning notes have been removed from the
+  current source tree. Existing commit history is retained; historical author
+  information and non-secret development paths may still be visible.
+- Pull requests use read-only, secret-free CI for tests, builds, license notices,
+  dependency advisories, and complete-history secret scanning.
+- Contributor changes to `main` require maintainer code-owner review and passing
+  checks. Private vulnerability reporting is the route for security reports.
 
-## Verification
+## Public download readiness
 
-A temporary clean source copy installed dependencies with `npm ci`, passed
-all 144 tests, built the desktop/mobile assets, and verified reproducible
-third-party notices. Isolated Electron fixtures verify account sign-in guards
-and credential redaction without signing into a real account or submitting
-model prompts. Installed Codex compatibility tests explicitly disable shared
-credential storage and verify the isolated account is signed out.
+Repository visibility and source checks do not establish that a downloadable
+app is notarized or that another operating system is supported. For a public
+Mac binary, use the documented `--public` packaging mode, validate Developer ID
+signing and notarization, and test the downloaded artifact on a clean Mac.
 
-An actual unsigned macOS arm64 package retained the main/shared modules,
-desktop/mobile assets, MIT notices, production dependencies, native PTY addon
-and spawn helper. Its native-terminal/file-drop smoke passed. The final
-persistent locally signed package also passed isolated account lifecycle,
-reauthentication and native-terminal/file-drop smoke checks. Developer ID
-signing and Apple notarization have not been exercised with release
-credentials. Automated scans and tests do not prove absence of every flaw.
-
-## Before public downloads
-
-1. Enable the prepared GitHub checks using docs/ci/README.md. Merge/review the intended source branch and choose the repository's public
-   visibility separately. Enable private vulnerability reporting and confirm
-   the MIT license is the intended project policy.
-2. Build using the documented `--public` mode with the maintainer's Developer
-   ID Application identity and notarization profile. Validate signing,
-   notarization/stapling and native PTY operation in that actual artifact.
-3. Test a downloaded artifact on a clean Apple Silicon Mac, including folder
-   access, real provider sign-in, account switching, upgrades and restart.
-4. Publish a versioned download and setup instructions. Hosted multi-user
-   phone enrollment, automatic app updates and other operating systems are
-   not included in this source-beta preparation. Phone access is currently
-   optional and self-hosted.
+No application credentials or signing keys are distributed. Phone access is
+optional and self-hosted, as described in `remote-self-hosting.md`.

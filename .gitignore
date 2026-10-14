@@ -29,3 +29,15 @@ remote-host.json
 .codex/
 .claude/
 .agents/
+
+# Local account profiles, phone credentials and developer preferences
+cloudflare-accounts.json
+cloudflare-profiles/
+codex-accounts/
+github-accounts/
+open-workspace.json
+remote-push.json
+remote-preferences.json
+sound-preferences.json
+identity.json
+attachments/
