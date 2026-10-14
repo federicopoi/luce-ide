@@ -4,7 +4,8 @@ A local Mac workspace for project terminals, Claude Code and Codex conversations
 
 Luce is an independent project for Apple Silicon Macs, licensed under [MIT](LICENSE).
 Contributions are welcome through pull requests; see [CONTRIBUTING.md](CONTRIBUTING.md).
-Windows support is a contribution target, not a supported release yet.
+[Windows](docs/windows-porting.md) and [Linux](docs/linux-porting.md) support
+are contribution targets, not supported releases yet.
 Codex, Claude Code and GitHub accounts belong to each user; Luce does not include
 provider accounts, subscriptions or credentials. Claude currently uses its
 existing local login; separate account profiles are available for Codex and GitHub.

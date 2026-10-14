@@ -1,8 +1,8 @@
 # Public source readiness
 
 Luce is an MIT-licensed source project for Apple Silicon Macs. Community
-contributions, including Windows support, are welcome through reviewed PRs.
-Windows support is not yet part of a supported release.
+contributions, including Windows and Linux support, are welcome through reviewed PRs.
+Windows and Linux support are not yet part of a supported release.
 
 ## Repository safeguards
 

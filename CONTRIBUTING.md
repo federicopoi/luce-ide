@@ -22,10 +22,11 @@ updated notices. Third-party code and brand marks retain their own licenses
 and trademark rights. Contributions to Luce are provided under the project
 MIT license. Report security issues according to [SECURITY.md](SECURITY.md).
 
-## Windows and other platforms
+## Windows and Linux
 
-Windows support is welcome but not implemented yet. Start with
-[the Windows porting guide](docs/windows-porting.md). Keep the port in focused
+Windows and Linux support are welcome but not implemented yet. Start with
+[the Windows porting guide](docs/windows-porting.md) or
+[the Linux porting guide](docs/linux-porting.md). Keep the port in focused
 PRs and explain which platforms you tested. Use your own CLI logins or fixtures;
 maintainer credentials, signing keys, and relay access are not needed.
 
