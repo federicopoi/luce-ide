@@ -2,6 +2,16 @@ const encoder=new TextEncoder();
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
 const b64url=bytes=>btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/g,'');
 async function sha(value){return b64url(await crypto.subtle.digest('SHA-256',encoder.encode(value)));}
+// The phone app holds its pairing key in this origin, so lock down what the
+// page may load, embed or connect to. Inline styles are required by xterm.
+function securityHeaders(headers,url){
+ const socket=`${url.protocol==='https:'?'wss':'ws'}://${url.host}`;
+ headers.set('content-security-policy',`default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ${socket}; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'`);
+ headers.set('x-content-type-options','nosniff');headers.set('x-frame-options','DENY');headers.set('referrer-policy','no-referrer');
+ headers.set('cross-origin-opener-policy','same-origin');headers.set('permissions-policy','camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+ if(url.protocol==='https:')headers.set('strict-transport-security','max-age=31536000');
+ return headers;
+}
 function originAllowed(request){const origin=request.headers.get('origin');if(!origin)return true;try{return new URL(origin).origin===new URL(request.url).origin;}catch{return false;}}
 
 export default {
@@ -32,7 +42,7 @@ export default {
   const asset=await env.ASSETS.fetch(new Request(request,{headers}));
   const response=new Response(asset.body,asset);response.headers.set('cache-control','no-store');response.headers.set('cdn-cache-control','no-store');response.headers.set('cloudflare-cdn-cache-control','no-store');
   for(const name of ['etag','last-modified','expires','cf-cache-status','age'])response.headers.delete(name);
-  return response;
+  securityHeaders(response.headers,url);return response;
  }
 };
 
