@@ -63,7 +63,7 @@ function readPairing() {
 
 async function acceptPairing(next) {
   const current = storedPairing();
-  if (current && (current.hostId !== next.hostId || current.deviceId !== next.deviceId || current.relayURL !== next.relayURL)) {
+  if (current && (current.hostId !== next.hostId || current.deviceId !== next.deviceId || current.key !== next.key || current.relayURL !== next.relayURL)) {
     const replace = await confirmChoice('This phone is already paired with a Mac. Replace that pairing with the new link? Only continue if you just scanned this code in Luce on your own Mac.', 'Replace pairing');
     if (!replace) { showToast('Kept the existing pairing.'); return current; }
   }
