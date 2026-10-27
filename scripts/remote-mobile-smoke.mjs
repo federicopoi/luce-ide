@@ -105,7 +105,7 @@ try {
   await mkdir(path.join(root, 'artifacts/mobile-polish'), { recursive: true });
   page.on('pageerror', error => console.error('PAGE ERROR:', error.stack));
   page.on('console', message => { if (message.type() === 'error') console.error('BROWSER:', message.text()); });
-  await page.goto(`http://127.0.0.1:${address.port}/#pair=eyJob3N0SWQiOiJoMSIsImRldmljZUlkIjoiZDEiLCJrZXkiOiJrMSIsInJlbGF5VVJMIjoiaHR0cDovL2xvY2FsaG9zdDo5OTk5In0`);
+  await page.goto(`http://127.0.0.1:${address.port}/#pair=${Buffer.from(JSON.stringify({hostId:'h1',deviceId:'d1',key:'k1',relayURL:`http://127.0.0.1:${address.port}`})).toString('base64url')}`);
   const installAssets = await page.evaluate(async () => ({
     manifest: await (await fetch('/manifest.webmanifest')).json(),
     touchIcon: document.querySelector('link[rel="apple-touch-icon"]')?.getAttribute('href'),

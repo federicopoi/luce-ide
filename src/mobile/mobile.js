@@ -43,20 +43,32 @@ let pollTimer = null;
 let toastTimer = null;
 const pendingTerminalWrites = new Set();const terminalDrafts=new Map();let recoveryDraft=null;const pendingApprovals=new Set();
 
+// A pairing link carries a private key. Accept only links for this relay, and
+// never silently replace an existing pairing: a crafted link could otherwise
+// re-pair this phone with someone else's Mac.
 function readPairing() {
   const match = location.hash.match(/^#pair=([A-Za-z0-9_-]+)$/);
   if (!match) return null;
+  history.replaceState(null, '', location.pathname + location.search);
   try {
     const value = JSON.parse(atob(match[1].replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - match[1].length % 4) % 4)));
-    if (!value.hostId || !value.deviceId || !value.key || !value.relayURL) throw Error('Incomplete pairing link');
-    history.replaceState(null, '', location.pathname + location.search);
-    localStorage.setItem(storageKey, JSON.stringify(value));
-    return value;
-  } catch (error) {
-    history.replaceState(null, '', location.pathname + location.search);
+    if (!['hostId', 'deviceId', 'key', 'relayURL'].every(field => typeof value?.[field] === 'string' && value[field])) throw Error('Incomplete pairing link');
+    if (new URL(value.relayURL).origin !== location.origin) throw Error('Pairing link belongs to another relay');
+    return {hostId: value.hostId, deviceId: value.deviceId, key: value.key, relayURL: value.relayURL};
+  } catch {
     showToast('This pairing link is invalid. Scan a new code from Luce.');
     return null;
   }
+}
+
+async function acceptPairing(next) {
+  const current = storedPairing();
+  if (current && (current.hostId !== next.hostId || current.deviceId !== next.deviceId || current.key !== next.key || current.relayURL !== next.relayURL)) {
+    const replace = await confirmChoice('This phone is already paired with a Mac. Replace that pairing with the new link? Only continue if you just scanned this code in Luce on your own Mac.', 'Replace pairing');
+    if (!replace) { showToast('Kept the existing pairing.'); return current; }
+  }
+  localStorage.setItem(storageKey, JSON.stringify(next));
+  return next;
 }
 
 function storedPairing() {
@@ -399,11 +411,14 @@ function renderAccounts() {
 
 function renderCreateProvider() { $('#account-field').hidden = $('#create-provider').value !== 'codex';document.querySelectorAll('#create-providers button').forEach(button=>{const selected=button.dataset.provider===$('#create-provider').value;button.setAttribute('aria-checked',String(selected));button.tabIndex=selected?0:-1;}); }
 
-async function confirmed(message, action, label) {
+function confirmChoice(message, label) {
   $('#confirm-copy').textContent = message; $('#confirm-action').textContent = label;
-  const dialog = $('#confirm-dialog'); dialog.showModal();
-  const result = await new Promise(resolve => { dialog.addEventListener('close', () => resolve(dialog.returnValue), { once: true }); });
-  if (result !== 'confirm') return;
+  const dialog = $('#confirm-dialog'); dialog.returnValue = ''; dialog.showModal();
+  return new Promise(resolve => { dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true }); });
+}
+
+async function confirmed(message, action, label) {
+  if (!await confirmChoice(message, label)) return;
   try { await action(); } catch (error) { showToast(safeText(error?.message, 'Request failed')); }
 }
 
@@ -640,6 +655,9 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) stopP
 addEventListener('online', () => { if (connection) { clearTimeout(reconnectTimer); reconnectTimer = setTimeout(() => { const pair = storedPairing(); if (pair) connect(pair); }, 0); } });
 addEventListener('offline', () => { if (connection) setConnection(false, 'Offline'); });
 
-const pairing = readPairing() || storedPairing();
-if (pairing) { $('#device-description').textContent = `Paired as ${safeText(pairing.deviceId, 'device')}.`; connect(pairing); installServiceWorker(); $('#tabbar').hidden = false; navigate('projects'); }
-else { showUnpaired(); }
+(async () => {
+  const linked = readPairing();
+  const pairing = linked ? await acceptPairing(linked) : storedPairing();
+  if (pairing) { $('#device-description').textContent = `Paired as ${safeText(pairing.deviceId, 'device')}.`; connect(pairing); installServiceWorker(); $('#tabbar').hidden = false; navigate('projects'); }
+  else { showUnpaired(); }
+})();
