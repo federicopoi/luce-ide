@@ -1,6 +1,6 @@
 const {test}=require('node:test');const assert=require('node:assert/strict');const {TerminalPalette}=require('../src/main/terminal-palette.cjs');
 test('palette probes are answered exactly once at every chunk boundary and omitted from replay',()=>{
- for(const end of ['\x07','\x1b\\'])for(const slot of [10,11]){const query=`\x1b]${slot};?${end}`;for(let split=0;split<=query.length;split++){const replies=[],palette=new TerminalPalette(data=>replies.push(data));const output=palette.consume('before'+query.slice(0,split))+palette.consume(query.slice(split)+'after');assert.equal(output,'beforeafter');assert.deepEqual(replies,[`\x1b]${slot};rgb:${slot===10?'ecec/ecec/ecec':'1c1c/1c1c/1c1c'}\x1b\\`]);}}
+ for(const end of ['\x07','\x1b\\'])for(const slot of [10,11]){const query=`\x1b]${slot};?${end}`;for(let split=0;split<=query.length;split++){const replies=[],palette=new TerminalPalette(data=>replies.push(data));const output=palette.consume('before'+query.slice(0,split))+palette.consume(query.slice(split)+'after');assert.equal(output,'beforeafter');assert.deepEqual(replies,[`\x1b]${slot};rgb:${slot===10?'ecec/ecec/ecec':'0909/0909/0909'}\x1b\\`]);}}
 });
 test('multiple probes do not swallow surrounding text, ANSI colors, or other terminal protocols',()=>{
  const replies=[],palette=new TerminalPalette(data=>replies.push(data));const before='\x1b[48;2;60;60;60mInput\x1b[0m\x1b]8;;https://example.test\x1b\\Link\x1b]8;;\x1b\\';

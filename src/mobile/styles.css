@@ -1,8 +1,8 @@
-/* Luce mobile: restrained surfaces and compact hierarchy, informed by the local Cursor demo. */
+/* Luce Remote: the Orca-inspired desktop surface system, with touch targets. */
 :root{
- color-scheme:dark;--bg:#1f1e1b;--panel:#292824;--panel-raised:#34332e;
- --line:#ffffff10;--text:#f4f0e8;--muted:#a3a09a;--quiet:#85827b;
- --yellow:#e3c878;--green:#83b99e;--red:#df8a8c;--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);
+ color-scheme:dark;--bg:#090909;--panel:#171717;--panel-raised:#252525;
+ --line:#303030;--text:#e7e7e7;--muted:#a0a0a0;--quiet:#888888;
+ --yellow:#e5bb4b;--green:#00bc8b;--red:#e77878;--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);
  --nav-height:64px;--header-height:52px;
  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-synthesis:none;text-rendering:optimizeLegibility;
 }
@@ -168,3 +168,20 @@ main{width:min(100%,680px);margin:0 auto;padding:18px 18px 28px}
 @media(min-width:700px){.tabbar{left:50%;right:auto;width:min(560px,100%);transform:translateX(-50%)}main{padding-top:24px}}
 @media(min-width:900px){.preview-mode main{display:grid;grid-template-columns:280px minmax(0,1fr);gap:16px}.preview-mode #terminal-view[hidden]{display:block!important;max-height:calc(100dvh - 24px);overflow-y:auto;min-width:0;padding:10px}.preview-mode #terminal-output{height:45dvh}.preview-expanded main{display:block}.preview-expanded #terminal-view[hidden]{display:none!important}}
 @media(prefers-reduced-motion:reduce){button{transition:none}}
+
+/* Match desktop chrome without reducing mobile control sizes. */
+.topbar,.tabbar{background:#171717;border-color:var(--line)}
+.topbar{border-bottom:1px solid var(--line)}
+.brand{letter-spacing:0;font-weight:500}.brand-mark{fill:#bbb}
+.workspace-search{background:#111;border-color:#333;border-radius:6px}
+.workspace-filters button{border-radius:5px}.workspace-filters button[aria-pressed=true]{background:#292929}
+.project-card,.account-card,.setting-card,.approval-card{border-color:#303030;border-radius:7px;background:#141414}
+.plain-button,.back-button{border-radius:6px}
+.tabbar button{border-radius:6px}.tabbar button.active{background:#252525}
+.dialog-card{background:#171717;border-color:#3b3b3b;border-radius:9px}
+.toast{border-radius:6px;background:#252525;border-color:#414141}
+input,select,textarea{border-radius:6px}
+#composer{background:#171717;border-color:#373737;border-radius:10px;padding-left:12px}
+#send-button{background:#e7e7e7;color:#111;border-radius:6px}
+.preview-frame,.preview-tools,.preview-compatibility{border-radius:6px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}

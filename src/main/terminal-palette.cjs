@@ -1,6 +1,6 @@
 // Answer startup palette probes even when no renderer has attached yet.
 // Consume the probes so replaying a transcript cannot inject late replies.
-const foreground='#ececec',background='#1c1c1c';
+const foreground='#ececec',background='#090909';
 const queries=[10,11].flatMap(slot=>['\x07','\x1b\\'].map(end=>`\x1b]${slot};?${end}`));
 function rgb(hex){return hex.slice(1).match(/../g).map(part=>part+part).join('/');}
 class TerminalPalette {

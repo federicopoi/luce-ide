@@ -11,7 +11,7 @@ try{
  const p=await page.evaluate(dir=>window.luce.addProject(dir),folder);
  await page.locator('#find-sessions').click();await page.locator('#discovery-search').fill('no matching folder');
  const search=await page.locator('#discovery-search').evaluate(el=>({inner:getComputedStyle(el).borderWidth,outer:getComputedStyle(el.parentElement).borderRadius,height:el.parentElement.getBoundingClientRect().height}));
- assert.equal(search.inner,'0px','Search input has one border, supplied by its wrapper');assert.ok(parseFloat(search.outer)>=8&&search.height>=38,'Search has a rounded comfortable hit target');
+ assert.equal(search.inner,'0px','Search input has one border, supplied by its wrapper');assert.ok(search.height>=38,'Search retains a comfortable hit target');
  await page.screenshot({path:'artifacts/polish-discovery.png'});await page.getByRole('button',{name:'Close dialog'}).click();
  assert.equal(await page.locator('.utility-rail #collapse-projects').count(),1,'Navigation view control lives with the other tools');
  await page.locator('#collapse-projects').click();assert.equal(await page.locator('#project-sidebar').isVisible(),false);

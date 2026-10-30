@@ -37,7 +37,7 @@ let scanningServers=false;const switching=new Set(),removingAccounts=new Set(),a
 function accountLoginActive(id){return authenticatingAccounts.has(id)||accountService.isLoginPending(id);}
 function useAccount(id,{allowLogin=false}={}){accounts.get(id);if(removingAccounts.has(id))throw Error('This account is being removed.');if(!allowLogin&&accountLoginActive(id))throw Error('Finish or cancel this account’s sign-in first.');accountOperations.set(id,(accountOperations.get(id)||0)+1);return ()=>{const count=(accountOperations.get(id)||1)-1;if(count)accountOperations.set(id,count);else accountOperations.delete(id);};}
 async function scanServers(){if(scanningServers||!store||!terminals)return;scanningServers=true;try{const projects=store.snapshot().projects,dirs=[...new Set([...projects.map(p=>p.directory),...terminals.list().map(s=>s.workingDirectory).filter(Boolean)])];const servers=await findLocalServers(dirs);await Promise.all(terminals.list().map(async s=>{const p=projects.find(p=>p.id===s.projectId);const own=s.previewURL&&await reachable(s.previewURL)?s.previewURL:null;terminals.updatePreviewAvailability(s.id,own||servers.get(s.workingDirectory)||servers.get(p?.directory)||null);}));}finally{scanningServers=false;}}
-app.setName('Luce');
+app.setName(process.env.LUCE_DESIGN_PREVIEW==='1'?'Luce Preview':'Luce');
 // Keep the original profile to preserve projects, Chromium storage and browser sessions.
 const profile=process.env.LUCE_PROFILE||process.env.ORBIT_PROFILE||path.join(app.getPath('appData'),'Orbit');
 fs.mkdirSync(profile,{recursive:true});app.setPath('userData',profile);
@@ -157,7 +157,8 @@ function registerIPC(){
 }
 function createWindow(){
  if(window&&!window.isDestroyed()){window.show();window.focus();return;}
- window=new BrowserWindow({width:1480,height:940,minWidth:960,minHeight:640,backgroundColor:'#171819',title:'Luce',titleBarStyle:'hidden',trafficLightPosition:{x:16,y:15},webPreferences:{preload:path.join(__dirname,'preload.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false}});
+ window=new BrowserWindow({width:1480,height:940,minWidth:960,minHeight:640,backgroundColor:'#090909',title:process.env.LUCE_DESIGN_PREVIEW==='1'?'Luce Preview · Orca Design':'Luce',titleBarStyle:'hidden',trafficLightPosition:{x:16,y:15},webPreferences:{preload:path.join(__dirname,'preload.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false}});
+ if(process.env.LUCE_DESIGN_PREVIEW==='1')window.on('page-title-updated',event=>{event.preventDefault();window.setTitle('Luce Preview · Orca Design');});
  window.webContents.on('before-input-event',(event,input)=>{
   if(input.type!=='keyDown'||!input.meta||input.alt||input.control)return;
   const name={'+':'terminal-font-increase','=':'terminal-font-increase','-':'terminal-font-decrease','0':'terminal-font-reset'}[input.key];if(!name)return;

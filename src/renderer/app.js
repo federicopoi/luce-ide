@@ -134,7 +134,7 @@ function fitProjectTabs(){
  const list=$('project-tabs-list'),overflow=$('tab-overflow'),tabs=[...list.children],nav=$('project-tabs');
  for(const tab of tabs)tab.hidden=false;
  overflow.hidden=true;
- const gap=6,widths=tabs.map(tab=>tab.getBoundingClientRect().width),total=widths.reduce((sum,width)=>sum+width,0)+Math.max(0,tabs.length-1)*gap;
+ const gap=parseFloat(getComputedStyle(list).columnGap)||0,widths=tabs.map(tab=>tab.getBoundingClientRect().width),total=widths.reduce((sum,width)=>sum+width,0)+Math.max(0,tabs.length-1)*gap;
  const space=nav.clientWidth-$('tab-add-project').getBoundingClientRect().width-4;
  if(total<=space){list.style.width=total+'px';return;}
  overflow.hidden=false;overflow.textContent='+'+tabs.length;
@@ -191,7 +191,7 @@ function makeTerminal(s){
  const pane=document.createElement('section');pane.className='terminal-pane';pane.dataset.sessionId=s.id;pane.innerHTML='<div class="pane-header"></div><div class="terminal-body"></div>';
  const openTerminalURL=text=>{let url;try{url=new URL(text);}catch{return;}if(!['http:','https:'].includes(url.protocol))return;const live=state.terminals.find(session=>session.id===s.id);if(live)run(()=>openPreview(live,url.href));};
  const webLinks=createTerminalWebLinks(openTerminalURL);
- const terminal=new Terminal({fontFamily:'"SFMono-Regular", Menlo, Monaco, monospace',fontSize:terminalFontSize,lineHeight:1.3,letterSpacing:0.15,cursorBlink:true,cursorStyle:'block',minimumContrastRatio:1,scrollback:10000,allowProposedApi:false,linkHandler:webLinks.handler,theme:{background:'#1c1c1c',foreground:'#ececec',cursor:'#ececec',cursorAccent:'#1c1c1c',selectionBackground:'#ffffff18',selectionInactiveBackground:'#ffffff18',black:'#1c1c1c',red:'#e85c57',green:'#43d17a',yellow:'#e5c454',blue:'#58a6ff',magenta:'#c678dd',cyan:'#56d4dd',white:'#dce4e3',brightBlack:'#a8b0bb',brightRed:'#e7ad98',brightGreen:'#b4e4bb',brightYellow:'#ead8ad',brightBlue:'#a0cede',brightMagenta:'#cfc0e8',brightCyan:'#a4d9d3',brightWhite:'#f2f6f4'}});
+ const terminal=new Terminal({fontFamily:'"SFMono-Regular", Menlo, Monaco, monospace',fontSize:terminalFontSize,lineHeight:1.3,letterSpacing:0.15,cursorBlink:true,cursorStyle:'block',minimumContrastRatio:1,scrollback:10000,allowProposedApi:false,linkHandler:webLinks.handler,theme:{background:'#090909',foreground:'#ececec',cursor:'#ececec',cursorAccent:'#090909',selectionBackground:'#ffffff18',selectionInactiveBackground:'#ffffff18',black:'#090909',red:'#e85c57',green:'#43d17a',yellow:'#e5c454',blue:'#58a6ff',magenta:'#c678dd',cyan:'#56d4dd',white:'#dce4e3',brightBlack:'#a8b0bb',brightRed:'#e7ad98',brightGreen:'#b4e4bb',brightYellow:'#ead8ad',brightBlue:'#a0cede',brightMagenta:'#cfc0e8',brightCyan:'#a4d9d3',brightWhite:'#f2f6f4'}});
  const fit=new FitAddon();terminal.loadAddon(fit);terminal.loadAddon(new WebLinksAddon(webLinks.handler.activate,webLinks.handler));terminal.open(pane.querySelector('.terminal-body'));webLinks.mount(terminal.element);
  installFileLinks(terminal,{locate:text=>api.locateTerminalFile(s.id,text),reveal:location=>run(()=>fileBrowser.reveal({...location,terminalId:s.id}))});
  pane.addEventListener('paste',event=>{const files=[...(event.clipboardData?.files||[])].filter(file=>file.type.startsWith('image/'));if(!files.length||event.clipboardData.getData('text/plain'))return;event.preventDefault();event.stopImmediatePropagation();run(()=>pasteFiles(s.id,files,true));},true);

@@ -33,7 +33,9 @@
     "smoke:terminal-links": "node scripts/terminal-links-smoke.mjs",
     "smoke:completion": "node scripts/completion-smoke.mjs",
     "smoke:project-tabs": "node scripts/project-tabs-smoke.mjs",
-    "smoke:workspace-resume": "node scripts/workspace-resume-smoke.mjs"
+    "smoke:workspace-resume": "node scripts/workspace-resume-smoke.mjs",
+    "preview:orca": "npm run build && node scripts/preview-orca.mjs",
+    "smoke:orca": "node scripts/orca-design-smoke.mjs"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",

@@ -78,7 +78,7 @@ test('PTY answers Codex palette probes before any renderer attaches',async t=>{
  const {manager,project}=setup(t);const executable=path.join(project.directory,'palette.cjs');
  fs.writeFileSync(executable,`#!/usr/bin/env node
 process.stdin.setRawMode(true);process.stdin.resume();let response='';
-process.stdin.on('data',chunk=>{response+=chunk.toString();if(response.includes(']10;rgb:ecec/ecec/ecec')&&response.includes(']11;rgb:1c1c/1c1c/1c1c')){console.log('PALETTE_SUPPORTED');process.exit(0);}});
+process.stdin.on('data',chunk=>{response+=chunk.toString();if(response.includes(']10;rgb:ecec/ecec/ecec')&&response.includes(']11;rgb:0909/0909/0909')){console.log('PALETTE_SUPPORTED');process.exit(0);}});
 process.stdout.write('\\x1b]10;?\\x1b\\\\\\x1b]11;?\\x1b\\\\');setTimeout(()=>{console.log('PALETTE_MISSING');process.exit(1);},300);
 `);fs.chmodSync(executable,0o755);manager.executables.codex=executable;const session=manager.create(project,{provider:'codex'});
  await until(()=>manager.get(session.id).status==='exited');assert.match(manager.get(session.id).buffer,/PALETTE_SUPPORTED/);assert.doesNotMatch(manager.get(session.id).buffer,/\x1b\]1[01];\?/);assert.equal(manager.get(session.id).hasSubmittedInput,undefined,'Palette replies do not count as user messages');
