@@ -101,11 +101,11 @@ try{
  await page.screenshot({path:'artifacts/terminal-workspace.png'});
  await page.reload();for(const [selector,width] of Object.entries(widths))assert.ok(Math.abs((await page.locator(selector).boundingBox()).width-width)<2,'Sidebar width survives reload');await page.locator('[data-session-id="'+session.id+'"] .xterm').waitFor();
  assert.equal((await page.evaluate(()=>window.luce.getState())).projects.length,2);assert.equal((await page.evaluate(()=>window.luce.getState())).terminals.filter(t=>t.status==='running').length,1);
- await page.getByRole('button',{name:'Change terminal layout'}).click();await page.getByRole('button',{name:'1 terminal',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#terminal-workspace').classList.contains('layout-1'));
+ await page.getByRole('button',{name:'1 terminal layout',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#terminal-workspace').classList.contains('layout-1'));
  assert.equal((await page.evaluate(()=>window.luce.getState())).projects.find(p=>p.id===p1.id).layout,1);
  await new Promise(resolve=>server.close(resolve));
  await until(()=>page.evaluate(async id=>!(await window.luce.getTerminal(id)).previewAvailable,session.id));
- assert.equal(await page.locator('[data-session-id="'+session.id+'"] .pane-preview').count(),0,'Preview icon disappears when server stops');
+ assert.equal(await page.locator('[data-session-id="'+session.id+'"] .pane-preview').count(),1,'Retained browser tabs remain available when the server stops');
  if((process.env.LUCE_PROVIDER_SMOKE||process.env.ORBIT_PROVIDER_SMOKE)){
   for(const provider of ['codex','claude']){
    const created=await page.evaluate(({projectId,provider})=>window.luce.createTerminal({projectId,provider}),{projectId:p1.id,provider});if(provider==='claude')assert.match(created.conversationId,/^[a-zA-Z0-9_-]{8,128}$/);else assert.equal(created.conversationId,null);
