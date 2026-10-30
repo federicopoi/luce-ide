@@ -34,7 +34,7 @@ class AccountService extends EventEmitter {
   const c=await this.client(id);await c.request('account/login/cancel',{loginId:login.loginId});
   if(this.pendingLogins.get(id)===login){this.pendingLogins.delete(id);const s=this.status.get(id)||{};s.status='signed-out';this.status.set(id,s);this.emit('changed');}
  }
- async remove(id){if(!this.accounts.get(id).managed)throw Error('The existing account cannot be removed.');await this.cancel(id);await this.clients.get(id)?.dispose();this.clients.delete(id);this.status.delete(id);this.accounts.remove(id);this.emit('changed');}
+ async remove(id){this.accounts.get(id);if(this.accounts.list().filter(a=>!a.hidden).length<2)throw Error('Add another account before removing the last account.');await this.cancel(id);await this.clients.get(id)?.dispose();this.clients.delete(id);this.status.delete(id);this.accounts.remove(id);this.emit('changed');}
  publicList(){return this.list().map(({loginId,authUrl,...a})=>a);}
  async dispose(){await Promise.all([...this.clients.values()].map(c=>c.dispose()));this.pendingLogins.clear();}
 }

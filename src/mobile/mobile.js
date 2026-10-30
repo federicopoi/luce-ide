@@ -362,7 +362,7 @@ function renderCreate(projectId, provider, accountId) {
   const selectedProvider = provider || previousProvider;
   if ([...providerSelect.options].some(option => option.value === selectedProvider)) providerSelect.value = selectedProvider;
   const accountSelect = $('#create-account'); accountSelect.replaceChildren();
-  for (const item of state.accounts) {
+  for (const item of state.accounts.filter(a => !a.hidden)) {
     const option = document.createElement('option'); option.value = item.id; option.textContent = `${safeText(item.name, 'Codex')}${item.status === 'signed-in' ? '' : ' · sign in on Mac'}`; option.disabled = item.status && item.status !== 'signed-in'; accountSelect.append(option);
   }
   if (!accountSelect.options.length) { const option = document.createElement('option'); option.value = 'default'; option.textContent = 'Default Codex account'; accountSelect.append(option); }
@@ -378,8 +378,8 @@ function renderCreate(projectId, provider, accountId) {
 
 function renderAccounts() {
   const root = $('#accounts-list'); root.replaceChildren();
-  if (!state.accounts.length) root.innerHTML = '<div class="empty-state">No Codex accounts are available.</div>';
-  for (const account of state.accounts) {
+  if (!state.accounts.some(a => !a.hidden)) root.innerHTML = '<div class="empty-state">No Codex accounts are available.</div>';
+  for (const account of state.accounts.filter(a => !a.hidden)) {
     const card = document.createElement('article'); card.className = 'account-card';
     const heading = document.createElement('h2'); heading.textContent = providerAccountLabel('codex',safeText(account.name, 'Existing login'));
     const identity = document.createElement('p'); identity.textContent = [safeText(account.email, account.status || ''), safeText(account.plan)].filter(Boolean).join(' · ');

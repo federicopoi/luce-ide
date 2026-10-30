@@ -2,4 +2,17 @@ const {test}=require('node:test');const assert=require('node:assert/strict');con
 const {Accounts}=require('../src/main/accounts.cjs');
 function setup(t){const root=fs.mkdtempSync(path.join(os.tmpdir(),'luce-accounts-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));return {root,accounts:new Accounts({directory:root,env:{CODEX_HOME:path.join(root,'existing'),OPENAI_API_KEY:'secret'}})};}
 test('managed accounts persist and isolate homes and inherited API credentials',t=>{const {root,accounts}=setup(t);const personal=accounts.add('Personal');assert.equal(accounts.get('default').home,path.join(root,'existing'));assert.notEqual(accounts.get(personal.id).home,accounts.get('default').home);const env=accounts.environment(personal.id);assert.equal(env.OPENAI_API_KEY,undefined);assert.equal(env.CODEX_HOME,accounts.get(personal.id).home);assert.match(fs.readFileSync(path.join(env.CODEX_HOME,'config.toml'),'utf8'),/cli_auth_credentials_store = "file"/);const restarted=new Accounts({directory:root,env:{CODEX_HOME:path.join(root,'existing')}});assert.equal(restarted.get(personal.id).name,'Personal');assert.equal(fs.statSync(env.CODEX_HOME).mode&0o777,0o700);});
-test('account views never expose home paths or credentials and refuse invalid identities',t=>{const {accounts}=setup(t);const a=accounts.add('Personal');assert.throws(()=>accounts.get('../../elsewhere'),/account/i);assert.throws(()=>accounts.add(' '),/name/i);accounts.rename(a.id,'My personal');assert.equal(accounts.list().find(x=>x.id===a.id).name,'My personal');assert.equal(JSON.stringify(accounts.list()).includes('secret'),false);assert.equal(accounts.list()[0].home,undefined);assert.throws(()=>accounts.remove('default'),/existing/i);accounts.remove(a.id);assert.throws(()=>accounts.get(a.id),/account/i);});
+test('account views never expose home paths or credentials and refuse invalid identities',t=>{const {accounts}=setup(t);const a=accounts.add('Personal');assert.throws(()=>accounts.get('../../elsewhere'),/account/i);assert.throws(()=>accounts.add(' '),/name/i);accounts.rename(a.id,'My personal');assert.equal(accounts.list().find(x=>x.id===a.id).name,'My personal');assert.equal(JSON.stringify(accounts.list()).includes('secret'),false);assert.equal(accounts.list()[0].home,undefined);accounts.remove(a.id);assert.throws(()=>accounts.get(a.id),/account/i);});
+
+
+test('removing the shared Work entry hides it persistently while keeping its history available',t=>{
+ const {root,accounts}=setup(t),personal=accounts.add('Personal');
+ const shared=accounts.get('default').home;fs.mkdirSync(shared,{recursive:true});fs.writeFileSync(path.join(shared,'saved-history'),'keep');
+ accounts.remove('default');
+ const restarted=new Accounts({directory:root,env:{CODEX_HOME:shared}});
+ assert.equal(restarted.list().find(a=>a.id==='default').hidden,true);
+ assert.equal(restarted.defaultId('default'),personal.id);
+ assert.equal(restarted.defaultId(personal.id),personal.id);
+ assert.equal(fs.readFileSync(path.join(restarted.get('default').home,'saved-history'),'utf8'),'keep');
+ assert.throws(()=>restarted.remove(personal.id),/last|another/i);
+});

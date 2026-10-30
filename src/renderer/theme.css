@@ -402,3 +402,6 @@ dialog.spotlight .spotlight-footer kbd{padding:2px 5px;border:1px solid #ffffff1
 .cloudflare-card .github-card-heading>div{min-width:0}
 .cloudflare-card .github-card-heading span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px}
 @media(max-width:1100px){.project-summary .project-cloudflare{max-width:150px}.workspace>.project-summary:has(.project-cloudflare:not([hidden])){gap:8px}.project-summary:has(.project-cloudflare:not([hidden])) .project-path{max-width:120px}}
+
+.project-summary .project-codex{max-width:220px;min-width:0}
+@media(max-width:1100px){.workspace>.project-summary{gap:8px}.project-summary .project-codex{max-width:160px}.project-summary .project-path{max-width:120px}}

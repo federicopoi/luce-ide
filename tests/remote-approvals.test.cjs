@@ -129,9 +129,9 @@ test('TerminalManager routes new approvals through broker and leaves existing la
 
 test('Codex broker decisions beat later native replies and permission grants stay request-scoped',async()=>{
  const bridge=new CodexTerminalBridge({terminalId:'term-race',conversationId:'thread-race',onRequest:()=>Promise.resolve('accept')});const client=bridge.attachFixture();
- bridge.fixtureServer.receive(jsonrpc('item/permissions/requestApproval',42,{threadId:'thread-race',permissions:[{type:'network',host:'example.test'}]}));
- await waitFor(()=>bridge.fixtureServer.received?.id===42);assert.deepEqual(bridge.fixtureServer.received.result,{permissions:[{type:'network',host:'example.test'}],scope:'turn'});
- client.send({id:42,result:{decision:'decline'}});assert.deepEqual(bridge.fixtureServer.received.result,{permissions:[{type:'network',host:'example.test'}],scope:'turn'});
+ bridge.fixtureServer.receive(jsonrpc('item/permissions/requestApproval',42,{threadId:'thread-race',permissions:{network:{enabled:true}}}));
+ await waitFor(()=>bridge.fixtureServer.received?.id===42);assert.deepEqual(bridge.fixtureServer.received.result,{permissions:{network:{enabled:true}},scope:'turn'});
+ client.send({id:42,result:{decision:'decline'}});assert.deepEqual(bridge.fixtureServer.received.result,{permissions:{network:{enabled:true}},scope:'turn'});
 });
 
 test('Claude user PermissionRequest hooks remain in merged settings',async t=>{
@@ -251,3 +251,47 @@ test('Codex session identity follows start/resume responses, never background th
 test('background Codex diagnostics stay bounded and private',t=>{const {appendDiagnostic}=require('../src/main/codex-terminal-bridge.cjs'),file=path.join(temp(t),'server.log');appendDiagnostic(file,'timeout diagnostic');assert.match(fs.readFileSync(file,'utf8'),/timeout diagnostic/);assert.equal(fs.statSync(file).mode&0o777,0o600);appendDiagnostic(file,Buffer.alloc(2*1024*1024,65));assert.equal(fs.statSync(file).size,1024*1024);});
 
 test('Codex diagnostics retain the latest bounded tail and are removed with the terminal',async t=>{const {appendDiagnostic}=require('../src/main/codex-terminal-bridge.cjs'),directory=temp(t),service=new ApprovalService({directory});await service.start();t.after(()=>service.close());service.launchOptions('log-cleanup',{directory},{provider:'codex',file:'/codex',args:[]});const file=path.join(directory,'remote-approvals/log-cleanup.json.log');appendDiagnostic(file,Buffer.alloc(1024*1024,65));appendDiagnostic(file,'latest');assert.equal(fs.statSync(file).size,1024*1024);assert.ok(fs.readFileSync(file).toString().endsWith('AAAlatest'));service.removeTerminal('log-cleanup');assert.equal(fs.existsSync(file),false);});
+
+
+test('Codex start notifications link pending renamed conversations, without adopting child threads',()=>{
+ const bridge=new CodexTerminalBridge({terminalId:'renamed'}),ids=[];bridge.on('session',id=>ids.push(id));
+ bridge._fromServer({method:'thread/started',params:{thread:{id:'child',source:{subAgent:{thread_spawn:{parent_thread_id:'parent'}}}}}});
+ bridge._fromServer({method:'thread/started',params:{thread:{id:'own',source:'cli'}}});
+ bridge._fromServer({method:'thread/started',params:{thread:{id:'child-2'}}});
+ bridge._fromServer({method:'serverRequest/resolved',params:{requestId:99,threadId:'child-2'}});
+ assert.deepEqual(ids,['own']);assert.equal(bridge.conversationId,'own');
+});
+
+test('unsupported TUI approval replies leave the request available for Auto',async()=>{
+ let decide;const bridge=new CodexTerminalBridge({terminalId:'unsupported',onRequest:()=>new Promise(resolve=>decide=resolve)});
+ const client=bridge.attachFixture();bridge._fromServer(jsonrpc('item/commandExecution/requestApproval',81,{threadId:'own',command:'echo safe'}));
+ await waitFor(()=>client.messages.some(m=>m.id===81));
+ client.send({id:81,error:{code:-32601,message:'Not available in TUI yet for thread own.'}});
+ await new Promise(resolve=>setImmediate(resolve));assert.equal(bridge.pending.size,1);assert.equal(bridge.fixtureServer.received,undefined);
+ decide('accept');await waitFor(()=>bridge.fixtureServer.received?.id===81);
+ assert.deepEqual(bridge.fixtureServer.received,{id:81,result:{decision:'accept'}});
+ assert.ok(client.messages.some(m=>m.method==='serverRequest/resolved'&&m.params.requestId===81),'Auto clears the native prompt even if upstream does not echo resolution');
+});
+
+test('legacy Codex approvals can be completed through the broker without TUI support',async()=>{
+ for(const method of ['execCommandApproval','applyPatchApproval']){
+  const bridge=new CodexTerminalBridge({terminalId:'legacy',onRequest:async()=> 'accept'}),client=bridge.attachFixture();
+  bridge._fromServer(jsonrpc(method,82,{conversationId:'own',command:['echo','safe']}));
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.deepEqual(bridge.fixtureServer.received,{id:82,result:{decision:'approved'}});
+  assert.ok(client.messages.some(m=>m.method==='serverRequest/resolved'));
+ }
+});
+
+
+test('Codex permission denials use protocol objects and legacy cancellation stays compatible',async()=>{
+ for(const [method,params,want]of [
+  ['item/permissions/requestApproval',{threadId:'own',permissions:{network:{enabled:true}}},{permissions:{},scope:'turn'}],
+  ['execCommandApproval',{conversationId:'own'},{decision:'abort'}],
+  ['applyPatchApproval',{conversationId:'own'},{decision:'abort'}]
+ ]){
+  const bridge=new CodexTerminalBridge({terminalId:'denial',onRequest:async()=> 'decline'});bridge.attachFixture();
+  bridge._fromServer(jsonrpc(method,83,params));await new Promise(resolve=>setImmediate(resolve));
+  assert.deepEqual(bridge.fixtureServer.received,{id:83,result:want});
+ }
+});
