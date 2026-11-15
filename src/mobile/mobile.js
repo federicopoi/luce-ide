@@ -191,6 +191,32 @@ async function refreshState() {
   catch (error) { if(source!==connection||generation!==connectionGeneration)return;showToast(`Could not refresh Luce: ${safeText(error?.message, 'connection error')}`); }
 }
 
+function enableTerminalTouchScroll(screen) {
+  let gesture = null;
+  screen.element.addEventListener('touchstart', event => {
+    const touch = event.touches.length === 1 ? event.touches[0] : null;
+    gesture = touch ? {x: touch.clientX, y: touch.clientY, remainder: 0, scrolling: false} : null;
+  }, {passive: true});
+  screen.element.addEventListener('touchmove', event => {
+    if (!gesture || event.touches.length !== 1) { gesture = null; return; }
+    const touch = event.touches[0];
+    const delta = gesture.y - touch.clientY;
+    if (!gesture.scrolling) {
+      if (Math.max(Math.abs(delta), Math.abs(touch.clientX - gesture.x)) < 6) return;
+      if (Math.abs(touch.clientX - gesture.x) > Math.abs(delta)) { gesture = null; return; }
+      gesture.scrolling = true;
+    }
+    event.preventDefault();
+    const lineHeight = screen.element.querySelector('.xterm-screen').getBoundingClientRect().height / screen.rows;
+    if (lineHeight <= 0) return;
+    gesture.remainder += delta / lineHeight;
+    const lines = Math.trunc(gesture.remainder);
+    if (lines) { screen.scrollLines(lines); gesture.remainder -= lines; }
+    gesture.y = touch.clientY;
+  }, {passive: false});
+  for (const type of ['touchend', 'touchcancel']) screen.element.addEventListener(type, () => { gesture = null; }, {passive: true});
+}
+
 async function refreshTerminal() {
   const active = terminal(); const sourceConnection = connection; const generation = connectionGeneration;
   if (!active || !sourceConnection) return false;
@@ -205,7 +231,7 @@ async function refreshTerminal() {
       if (!xterm || xtermSessionId !== active.id) {
         xterm?.dispose();
         xterm = new Terminal({cols, rows, disableStdin: true, cursorBlink: false, scrollback: 5000, convertEol: true, fontSize: 12, fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace', theme: {background:'#1f1e1b',foreground:'#ececec',cursor:'#ececec',cursorAccent:'#1f1e1b',selectionBackground:'#ffffff33',black:'#202426',red:'#e85c57',green:'#43d17a',yellow:'#e5c454',blue:'#58a6ff',magenta:'#c678dd',cyan:'#56d4dd',white:'#dce4e3',brightBlack:'#a8b0bb',brightRed:'#e7ad98',brightGreen:'#b4e4bb',brightYellow:'#ead8ad',brightBlue:'#a0cede',brightMagenta:'#cfc0e8',brightCyan:'#a4d9d3',brightWhite:'#f2f6f4'}});
-        xterm.open($('#terminal-output')); xtermSessionId = active.id;
+        xterm.open($('#terminal-output')); enableTerminalTouchScroll(xterm); xtermSessionId = active.id;
       } else if (xterm.cols !== cols || xterm.rows !== rows) {
         // Resize only the phone renderer. The Mac PTY keeps its original geometry.
         xterm.resize(cols, rows);
@@ -240,7 +266,6 @@ function appendTerminalData(payload) {
     if (skip < data.length) xterm?.write(escapeAnsi(data.slice(skip)));
     terminalOffset = end;
   } else xterm?.write(escapeAnsi(data));
-  xterm?.scrollToBottom();
 }
 
 function recoverTerminalGap(forceSnapshot = false) {

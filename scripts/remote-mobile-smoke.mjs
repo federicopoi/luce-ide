@@ -99,7 +99,7 @@ const server = createServer(async (req, res) => {
 const address = server.address();
 const browser = await chromium.launch({ headless: true });
 try {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, deviceScaleFactor: 2 });
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
   await context.addInitScript(() => { localStorage.clear(); sessionStorage.clear(); });
   const page = await context.newPage();
   await mkdir(path.join(root, 'artifacts/mobile-polish'), { recursive: true });
@@ -149,6 +149,32 @@ try {
   assert.equal(await page.locator('#terminal-options').getAttribute('open'),null,'Extra controls start collapsed');
   assert.equal(await page.locator('#composer button').count(),1,'Composer contains only Send');
   await page.screenshot({path:path.join(root,'artifacts/mobile-polish/terminal-simple-390x844.png'),fullPage:true});
+  // Read earlier output with a real touch gesture while the terminal stays busy.
+  await page.evaluate(() => window.__remote.events.get('terminal-data')({id:'t1',data:Array.from({length:150},(_,i)=>`SCROLL LINE ${i}\r\n`).join('')}));
+  await page.waitForFunction(() => document.querySelector('.xterm-rows')?.textContent.includes('SCROLL LINE 149'));
+  const bottomRows = await page.locator('.xterm-rows').innerText();
+  const outputBounds = await page.locator('#terminal-output').boundingBox();
+  const touch = await context.newCDPSession(page);
+  const swipeX = Math.round(outputBounds.x + outputBounds.width / 2);
+  const swipeY = Math.round(outputBounds.y + 50);
+  await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:swipeX,y:swipeY}]});
+  for(let delta=20;delta<=160;delta+=20){await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:swipeX,y:swipeY+delta}]});await page.waitForTimeout(25);}
+  await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  await page.waitForTimeout(500);
+  const earlierRows = await page.locator('.xterm-rows').innerText();
+  assert.notEqual(earlierRows,bottomRows,'Swiping down reveals earlier terminal output');
+  await page.evaluate(() => window.__remote.events.get('terminal-data')({id:'t1',data:'LIVE OUTPUT WHILE READING\r\n'}));
+  await page.waitForTimeout(150);
+  assert.equal(await page.locator('.xterm-rows').innerText(),earlierRows,'Live output preserves the scroll position while reading history');
+  for(let swipe=0;swipe<3;swipe++){
+    await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:swipeX,y:swipeY+160}]});
+    for(let delta=20;delta<=160;delta+=20){await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:swipeX,y:swipeY+160-delta}]});await page.waitForTimeout(25);}
+    await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  }
+  await page.waitForFunction(() => document.querySelector('.xterm-rows')?.textContent.includes('LIVE OUTPUT WHILE READING'));
+  await page.evaluate(() => window.__remote.events.get('terminal-data')({id:'t1',data:'FOLLOWING LIVE OUTPUT\r\n'}));
+  await page.waitForFunction(() => document.querySelector('.xterm-rows')?.textContent.includes('FOLLOWING LIVE OUTPUT'));
+  await touch.detach();
   for(const viewport of [{width:320,height:568},{width:390,height:400},{width:430,height:932}]){await page.setViewportSize(viewport);const bounds=await page.locator('#composer').boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=viewport.width&&bounds.y+bounds.height<=viewport.height,`Composer fits ${JSON.stringify(viewport)}`);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Conversation has no page overflow');}await page.setViewportSize({width:390,height:844});
   const menuClosed=await page.locator('#terminal-options summary').boundingBox();
   await page.locator('#terminal-options summary').click();
