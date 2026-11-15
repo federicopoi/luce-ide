@@ -33,6 +33,8 @@ let terminalRecoveryPromise = null;
 let terminalRecoveryRequested = false;
 let xterm = null;
 let xtermSessionId = null;
+let terminalTouchCleanup = null;
+let terminalScrollGeneration = 0;
 let previewRequestPending = false;
 const previewActionPending = new Map();
 let previewCaptureGeneration = 0;
@@ -204,29 +206,85 @@ async function refreshState() {
 }
 
 function enableTerminalTouchScroll(screen) {
-  let gesture = null;
-  screen.element.addEventListener('touchstart', event => {
+  const output = $('#terminal-output'), controller = new AbortController();
+  screen.textarea.tabIndex = -1;
+  screen.textarea.setAttribute('inputmode', 'none');
+  let gesture = null, wheelData = null;
+  // Only capture input generated synchronously by our wheel event. Keyboard input
+  // remains in the composer, and terminal protocol replies are never forwarded.
+  const dataListener = screen.onData(data => { if (wheelData !== null) wheelData += data; });
+  const listen = (type, handler, passive) => output.addEventListener(type, handler, {passive, signal: controller.signal});
+  listen('touchstart', event => {
     const touch = event.touches.length === 1 ? event.touches[0] : null;
     gesture = touch ? {x: touch.clientX, y: touch.clientY, remainder: 0, scrolling: false} : null;
-  }, {passive: true});
-  screen.element.addEventListener('touchmove', event => {
-    if (!gesture || event.touches.length !== 1) { gesture = null; return; }
+  }, true);
+  listen('touchmove', event => {
+    if (screen !== xterm || !gesture || event.touches.length !== 1) { gesture = null; return; }
     const touch = event.touches[0];
-    const delta = gesture.y - touch.clientY;
+    let delta = gesture.y - touch.clientY;
     if (!gesture.scrolling) {
       if (Math.max(Math.abs(delta), Math.abs(touch.clientX - gesture.x)) < 6) return;
       if (Math.abs(touch.clientX - gesture.x) > Math.abs(delta)) { gesture = null; return; }
       gesture.scrolling = true;
     }
     event.preventDefault();
-    const lineHeight = screen.element.querySelector('.xterm-screen').getBoundingClientRect().height / screen.rows;
+    terminalScrollGeneration += 1;
+    gesture.y = touch.clientY;
+    // The Mac's screen can be taller than the phone. Pan that screen first,
+    // then continue into terminal scrollback at the top edge.
+    if (delta < 0 || screen.buffer.active.viewportY === screen.buffer.active.baseY) {
+      const before = output.scrollTop;
+      output.scrollTop += delta;
+      delta -= output.scrollTop - before;
+    }
+    const screenElement = screen.element.querySelector('.xterm-screen');
+    const lineHeight = screenElement.getBoundingClientRect().height / screen.rows;
     if (lineHeight <= 0) return;
     gesture.remainder += delta / lineHeight;
     const lines = Math.trunc(gesture.remainder);
-    if (lines) { screen.scrollLines(lines); gesture.remainder -= lines; }
-    gesture.y = touch.clientY;
-  }, {passive: false});
-  for (const type of ['touchend', 'touchcancel']) screen.element.addEventListener(type, () => { gesture = null; }, {passive: true});
+    if (!lines) return;
+    gesture.remainder -= lines;
+    if (screen.buffer.active.type === 'alternate' || screen.modes.mouseTrackingMode !== 'none') {
+      // Full-screen coding tools own their history. Let xterm encode the active
+      // mouse protocol (SGR, legacy, or application cursor keys) for the Mac PTY.
+      const bounds = screenElement.getBoundingClientRect();
+      const clientX = Math.max(bounds.left + 1, Math.min(bounds.right - 1, touch.clientX));
+      const clientY = Math.max(bounds.top + 1, Math.min(bounds.bottom - 1, touch.clientY));
+      wheelData = '';
+      screen.options.disableStdin = false;
+      try {
+        screenElement.dispatchEvent(new WheelEvent('wheel', {bubbles: true, cancelable: true, deltaY: lines * lineHeight, clientX, clientY}));
+      } finally { screen.options.disableStdin = true; }
+      const data = wheelData; wheelData = null;
+      if (data && connectionReady && terminal()?.status === 'running') request('write', {id: xtermSessionId, data}).catch(error => showToast(safeText(error?.message, 'Could not scroll terminal.')));
+    } else screen.scrollLines(lines);
+  }, false);
+  for (const type of ['touchend', 'touchcancel']) listen(type, () => { gesture = null; }, true);
+  return () => { controller.abort(); dataListener.dispose(); };
+}
+
+function terminalLatestTop(screen) {
+  const output = $('#terminal-output'), buffer = screen.buffer.active;
+  let lastRow = buffer.cursorY;
+  for (let row = screen.rows - 1; row > lastRow; row--) {
+    if (buffer.getLine(buffer.baseY + row)?.translateToString(true).trim()) { lastRow = row; break; }
+  }
+  const lineHeight = screen.element.querySelector('.xterm-screen').getBoundingClientRect().height / screen.rows;
+  return Math.max(0, (lastRow + 1) * lineHeight + 8 - output.clientHeight);
+}
+
+function terminalFollowing(screen) {
+  const output = $('#terminal-output');
+  return screen.buffer.active.viewportY === screen.buffer.active.baseY && output.scrollTop >= terminalLatestTop(screen) - 4;
+}
+
+function writeTerminalOutput(data) {
+  const screen = xterm;
+  if (!screen) return;
+  const follow = terminalFollowing(screen), scrollGeneration = terminalScrollGeneration;
+  screen.write(escapeAnsi(data), () => {
+    if (screen === xterm && follow && terminalScrollGeneration === scrollGeneration) $('#terminal-output').scrollTop = terminalLatestTop(screen);
+  });
 }
 
 async function refreshTerminal() {
@@ -239,18 +297,23 @@ async function refreshTerminal() {
     try {
       const snapshot = await sourceConnection.request('terminalSnapshot', {id: active.id});
       if (connection !== sourceConnection || connectionGeneration !== generation || terminal()?.id !== active.id) return false;
+      const previousScreen = xtermSessionId === active.id ? xterm : null;
+      const follow = !previousScreen || terminalFollowing(previousScreen);
+      const previousLine = previousScreen?.buffer.active.viewportY || 0, previousTop = $('#terminal-output').scrollTop;
       const cols = Number(snapshot?.cols) || 90, rows = Number(snapshot?.rows) || 24;
       if (!xterm || xtermSessionId !== active.id) {
         xterm?.dispose();
         xterm = new Terminal({cols, rows, disableStdin: true, cursorBlink: false, scrollback: 5000, convertEol: true, fontSize: 12, fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace', theme: {background:'#1f1e1b',foreground:'#ececec',cursor:'#ececec',cursorAccent:'#1f1e1b',selectionBackground:'#ffffff33',black:'#202426',red:'#e85c57',green:'#43d17a',yellow:'#e5c454',blue:'#58a6ff',magenta:'#c678dd',cyan:'#56d4dd',white:'#dce4e3',brightBlack:'#a8b0bb',brightRed:'#e7ad98',brightGreen:'#b4e4bb',brightYellow:'#ead8ad',brightBlue:'#a0cede',brightMagenta:'#cfc0e8',brightCyan:'#a4d9d3',brightWhite:'#f2f6f4'}});
-        xterm.open($('#terminal-output')); enableTerminalTouchScroll(xterm); xtermSessionId = active.id;
+        xterm.open($('#terminal-output')); terminalTouchCleanup?.(); terminalTouchCleanup = enableTerminalTouchScroll(xterm); xtermSessionId = active.id;
       } else if (xterm.cols !== cols || xterm.rows !== rows) {
         // Resize only the phone renderer. The Mac PTY keeps its original geometry.
         xterm.resize(cols, rows);
       }
-      const screen = xterm;
+      const screen = xterm, scrollGeneration = terminalScrollGeneration;
       screen.reset(); screen.write(escapeAnsi(snapshot?.buffer || ''), () => {
-        if (connection === sourceConnection && connectionGeneration === generation && terminal()?.id === active.id && xterm === screen) screen.scrollToBottom();
+        if (connection !== sourceConnection || connectionGeneration !== generation || terminal()?.id !== active.id || xterm !== screen || terminalScrollGeneration !== scrollGeneration) return;
+        if (follow) { screen.scrollToBottom(); $('#terminal-output').scrollTop = terminalLatestTop(screen); }
+        else { screen.scrollToLine(previousLine); $('#terminal-output').scrollTop = previousTop; }
       });
       terminalOffset = Number(snapshot?.outputOffset) || 0;
       terminalObservedOffset = Math.max(terminalObservedOffset, terminalOffset);
@@ -275,9 +338,9 @@ function appendTerminalData(payload) {
     if (end <= terminalOffset) return;
     if (start > terminalOffset) { recoverTerminalGap(); return; }
     const skip = Math.max(0, terminalOffset - start);
-    if (skip < data.length) xterm?.write(escapeAnsi(data.slice(skip)));
+    if (skip < data.length) writeTerminalOutput(data.slice(skip));
     terminalOffset = end;
-  } else xterm?.write(escapeAnsi(data));
+  } else writeTerminalOutput(data);
 }
 
 function recoverTerminalGap(forceSnapshot = false) {
@@ -686,3 +749,18 @@ addEventListener('offline', () => { if (connection) setConnection(false, 'Offlin
   if (pairing) { $('#device-description').textContent = `Paired as ${safeText(pairing.deviceId, 'device')}.`; connect(pairing); installServiceWorker(); $('#tabbar').hidden = false; navigate('projects'); }
   else { showUnpaired(); }
 })();
+
+// iOS keeps the layout viewport tall while its keyboard reduces the visual viewport.
+function updateCodingViewport() {
+  const viewport = window.visualViewport;
+  const screen = xterm, follow = screen && terminalFollowing(screen), scrollGeneration = terminalScrollGeneration;
+  document.documentElement.style.setProperty('--coding-height', `${viewport?.height || innerHeight}px`);
+  document.documentElement.style.setProperty('--coding-width', `${viewport?.width || innerWidth}px`);
+  document.documentElement.style.setProperty('--coding-left', `${viewport?.offsetLeft || 0}px`);
+  document.documentElement.style.setProperty('--coding-top', `${viewport?.offsetTop || 0}px`);
+  if (follow) requestAnimationFrame(() => { if (screen === xterm && terminalScrollGeneration === scrollGeneration) $('#terminal-output').scrollTop = terminalLatestTop(screen); });
+}
+window.visualViewport?.addEventListener('resize', updateCodingViewport);
+window.visualViewport?.addEventListener('scroll', updateCodingViewport);
+addEventListener('resize', updateCodingViewport);
+updateCodingViewport();

@@ -105,17 +105,20 @@ main{width:min(100%,680px);margin:0 auto;padding:18px 18px 28px}
 .terminal-input-tools{display:flex;gap:4px;padding-top:10px;border-top:1px solid var(--line)}.terminal-input-tools button{flex:1;background:none;border:0;color:var(--muted);font-size:11px;padding:8px}
 .terminal-output{height:45dvh;min-height:180px;overflow:auto;padding:4px 0;background:var(--bg);border:0;overscroll-behavior:contain}
 .terminal-output pre{margin:0;font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
-.terminal-output .xterm{touch-action:pan-x}
+.terminal-output{touch-action:pan-x}
+.terminal-output .xterm{width:max-content;min-width:100%}
+.terminal-output .xterm-helper-textarea{pointer-events:none}
 #composer{display:flex;align-items:flex-end;gap:6px;margin-top:12px;padding:7px 8px 7px 17px;border:1px solid #ffffff18;border-radius:28px;background:var(--panel);box-shadow:inset 0 1px 0 #ffffff04}
 #terminal-message{flex:1;min-width:0;width:auto;min-height:40px;max-height:120px;padding:9px 0;border:0;border-radius:0;background:none;line-height:22px;font-size:16px;resize:none;outline:0}
 #composer:focus-within{border-color:#ffffff32}
 #send-button{display:grid;place-items:center;flex:none;width:40px;height:40px;min-width:40px;min-height:40px;padding:10px;border:0;border-radius:50%;background:#e6e3dc;color:#24221e}
 #send-button svg{width:18px;height:18px;transform:rotate(-45deg)}
-.terminal-mode{padding-bottom:0}.terminal-mode>.topbar,.terminal-mode>#tabbar{display:none}
-.terminal-mode main{height:100dvh;padding:calc(12px + var(--safe-top)) 16px calc(14px + var(--safe-bottom))}
+.terminal-mode{padding-bottom:0;position:fixed;inset:0;overflow:hidden}.terminal-mode>.topbar,.terminal-mode>#tabbar{display:none}
+.terminal-mode main{height:var(--coding-height,100dvh);width:var(--coding-width,100%);margin:0;transform:translate(var(--coding-left,0px),var(--coding-top,0px));padding:calc(12px + var(--safe-top)) 16px calc(14px + var(--safe-bottom))}
 .terminal-mode #terminal-view{display:flex;flex-direction:column;height:100%;min-height:0}
-.terminal-mode #terminal-output{flex:1;min-height:80px;height:auto}.terminal-mode #composer{flex:none;margin-top:12px}
-.terminal-mode #approval-list{max-height:28dvh;overflow:auto;flex:none}
+.terminal-mode .terminal-heading{flex:none}
+.terminal-mode #terminal-output{flex:1;min-height:0;min-width:0;height:auto}.terminal-mode #composer{flex:none;margin-top:12px}
+.terminal-mode #approval-list{max-height:min(28dvh,calc(var(--coding-height,100dvh) * .28));overflow:auto;flex:none}
 
 /* Approvals are contextual, never decorative status panels. */
 .approval-list{display:grid;gap:8px}

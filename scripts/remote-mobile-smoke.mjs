@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 import { build } from 'esbuild';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -97,7 +97,19 @@ const server = createServer(async (req, res) => {
 });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const address = server.address();
-const browser = await chromium.launch({ headless: true });
+const browser = await (process.env.LUCE_MOBILE_WEBKIT === '1' ? webkit : chromium).launch({ headless: true });
+async function mobileTouch(page) {
+  if (browser.browserType().name() === 'chromium') return page.context().newCDPSession(page);
+  // WebKit has no CDP touch injection. Exercise the same TouchEvent handlers
+  // against its real layout; Chromium above also tests native gesture delivery.
+  return {detach: async () => {}, send: async (_, {type,touchPoints}) => page.evaluate(({type,touchPoints}) => {
+    if(type==='touchStart')window.__touchTarget=document.elementFromPoint(touchPoints[0].x,touchPoints[0].y);
+    const points=touchPoints.map(p=>({identifier:1,clientX:p.x,clientY:p.y,pageX:p.x,pageY:p.y,target:window.__touchTarget}));
+    const event=new Event(type.toLowerCase(),{bubbles:true,cancelable:true});
+    Object.defineProperties(event,{touches:{value:points},targetTouches:{value:points},changedTouches:{value:points}});
+    window.__touchTarget.dispatchEvent(event);
+  }, {type,touchPoints})};
+}
 try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
   await context.addInitScript(() => { localStorage.clear(); sessionStorage.clear(); });
@@ -154,7 +166,7 @@ try {
   await page.waitForFunction(() => document.querySelector('.xterm-rows')?.textContent.includes('SCROLL LINE 149'));
   const bottomRows = await page.locator('.xterm-rows').innerText();
   const outputBounds = await page.locator('#terminal-output').boundingBox();
-  const touch = await context.newCDPSession(page);
+  const touch = await mobileTouch(page);
   const swipeX = Math.round(outputBounds.x + outputBounds.width / 2);
   const swipeY = Math.round(outputBounds.y + 50);
   await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:swipeX,y:swipeY}]});
@@ -175,7 +187,7 @@ try {
   await page.evaluate(() => window.__remote.events.get('terminal-data')({id:'t1',data:'FOLLOWING LIVE OUTPUT\r\n'}));
   await page.waitForFunction(() => document.querySelector('.xterm-rows')?.textContent.includes('FOLLOWING LIVE OUTPUT'));
   await touch.detach();
-  for(const viewport of [{width:320,height:568},{width:390,height:400},{width:430,height:932}]){await page.setViewportSize(viewport);const bounds=await page.locator('#composer').boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=viewport.width&&bounds.y+bounds.height<=viewport.height,`Composer fits ${JSON.stringify(viewport)}`);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Conversation has no page overflow');}await page.setViewportSize({width:390,height:844});
+  for(const viewport of [{width:320,height:568},{width:390,height:400},{width:430,height:932}]){await page.setViewportSize(viewport);await page.waitForFunction(()=>document.querySelector('#composer').getBoundingClientRect().bottom<=innerHeight);const bounds=await page.locator('#composer').boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=viewport.width&&bounds.y+bounds.height<=viewport.height,`Composer fits ${JSON.stringify(viewport)}`);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Conversation has no page overflow');}await page.setViewportSize({width:390,height:844});
   const menuClosed=await page.locator('#terminal-options summary').boundingBox();
   await page.locator('#terminal-options summary').click();
   const menuOpen=await page.locator('#terminal-options summary').boundingBox();assert.deepEqual(menuOpen,menuClosed,'Menu button stays fixed when toggled');
@@ -435,6 +447,65 @@ try {
   await page.locator('[data-project-id="p1"]').click();assert.equal(await page.locator('[data-project-id="p1"]').getAttribute('aria-expanded'),'false');await page.evaluate(()=>window.__remote.events.get('state')(structuredClone(window.__mobileState)));assert.equal(await page.locator('[data-project-id="p1"]').getAttribute('aria-expanded'),'false');await page.locator('[data-project-id="p1"]').click();
   await page.locator('#project-list [data-terminal-id="m1"]').click();if(!(await page.locator('#terminal-options').evaluate(el=>el.open)))await page.locator('#terminal-options summary').click();await page.getByRole('button',{name:'Preview',exact:true}).click();await page.evaluate(()=>{window.__mobileState.terminals=window.__mobileState.terminals.filter(t=>t.id!=='m1');window.__remote.events.get('state')(structuredClone(window.__mobileState));});await page.getByRole('heading',{name:'Live terminals'}).waitFor();assert.equal(await page.locator('#preview-view').isVisible(),false,'Removing preview session returns to overview');
   await page.setViewportSize({width:320,height:740});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.setViewportSize({width:768,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await page.setViewportSize({width:390,height:844});
+  await page.waitForTimeout(100);
+  // A real desktop coding pane can be much taller than the visible phone screen.
+  await page.evaluate(() => {
+    window.__snapshot={buffer:Array.from({length:60},(_,i)=>`DESKTOP ROW ${i}`).join('\r\n'),outputOffset:9000,cols:120,rows:60};
+    window.__mobileState.terminals.push({id:'tall-phone',projectId:'p1',provider:'codex',title:'Tall desktop coding',status:'running',cols:120,rows:60});
+    window.__remote.events.get('state')(structuredClone(window.__mobileState));
+    document.querySelector('[data-view="projects"]').click();
+  });
+  await page.locator('#project-list [data-terminal-id="tall-phone"]').click();
+  await page.waitForFunction(() => document.querySelector('.xterm-rows')?.textContent.includes('DESKTOP ROW 59'));
+  const tallOutput=page.locator('#terminal-output');
+  assert.ok(await tallOutput.evaluate(el=>el.scrollTop>100),'Opening a tall coding terminal shows its latest rows');
+  await page.screenshot({path:path.join(root,'artifacts/mobile-polish/coding-tall-phone.png')});
+  const codingTouch=await mobileTouch(page);
+  async function swipeCoding(down=true,blank=false){
+    const box=await tallOutput.boundingBox(),x=Math.round(box.x+box.width/2),y=Math.round(blank?box.y+box.height-180:box.y+30);
+    await codingTouch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y:y+(down?0:160)}]});
+    for(let i=1;i<=8;i++){await codingTouch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y+(down?i*20:160-i*20)}]});await page.waitForTimeout(25);}
+    await codingTouch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  }
+  const queuedScrollTop=await page.evaluate(()=>{
+    const output=document.querySelector('#terminal-output'),box=output.getBoundingClientRect();
+    window.__remote.events.get('terminal-data')({id:'tall-phone',data:'\r\nQUEUED CODING OUTPUT'});
+    for(const [type,y] of [['touchstart',box.y+30],['touchmove',box.y+170],['touchend',box.y+170]]){
+      const event=new Event(type,{bubbles:true,cancelable:true});
+      Object.defineProperty(event,'touches',{value:type==='touchend'?[]:[{clientX:box.x+100,clientY:y}]});
+      output.dispatchEvent(event);
+    }
+    return output.scrollTop;
+  });
+  await page.waitForTimeout(100);
+  assert.equal(await tallOutput.evaluate(el=>el.scrollTop),queuedScrollTop,'A queued output callback cannot undo a swipe into history');
+  await tallOutput.evaluate(el=>el.scrollTop=el.scrollHeight);
+  const tallStart=await tallOutput.evaluate(el=>el.scrollTop);
+  await swipeCoding();
+  assert.ok(await tallOutput.evaluate((el,start)=>el.scrollTop<start-50,tallStart),'Swiping reveals earlier rows inside a tall desktop screen');
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Wide coding output stays inside the phone viewport');
+  await page.evaluate(() => {
+    window.__mobileState.approvals=[{id:'keyboard-approval',terminalId:'tall-phone',provider:'codex',title:'Review command',summary:'A long approval request. '.repeat(50),status:'pending'}];
+    window.__remote.events.get('state')(structuredClone(window.__mobileState));
+    Object.defineProperty(visualViewport,'height',{configurable:true,value:360});
+    visualViewport.dispatchEvent(new Event('resize'));
+  });
+  await page.waitForTimeout(100);
+  await page.screenshot({path:path.join(root,'artifacts/mobile-polish/coding-keyboard-phone.png')});
+  assert.ok((await page.locator('#composer').boundingBox()).y+(await page.locator('#composer').boundingBox()).height<=360,'Composer remains above the mobile keyboard');
+  await page.evaluate(()=>{delete visualViewport.height;window.__mobileState.approvals=[];window.__remote.events.get('state')(structuredClone(window.__mobileState));visualViewport.dispatchEvent(new Event('resize'));});
+  await page.evaluate(() => {
+    window.__snapshot={buffer:'\x1b[?1049h\x1b[?1000h\x1b[?1006hCODING CURRENT OUTPUT',outputOffset:9100,cols:80,rows:24};
+    window.__mobileState.terminals.push({id:'alternate-phone',projectId:'p1',provider:'codex',title:'Full screen coding',status:'running',cols:80,rows:24});
+    window.__remote.events.get('state')(structuredClone(window.__mobileState));
+    document.querySelector('[data-view="projects"]').click();
+  });
+  await page.locator('#project-list [data-terminal-id="alternate-phone"]').click();
+  await page.waitForFunction(()=>document.querySelector('.xterm-rows')?.textContent.includes('CODING CURRENT OUTPUT'));
+  await swipeCoding(true,true);
+  assert.ok(await page.evaluate(()=>window.__remote.requests.some(r=>r.method==='write'&&r.params.id==='alternate-phone'&&/\x1b\[<64;\d+;\d+M/.test(r.params.data))),'Touch scrolling reaches the full-screen coding tool as mouse-wheel input');
+  await codingTouch.detach();
   await page.evaluate(()=>window.__remote.statusCallback({connected:false}));
   if(!(await page.locator('#tabbar').isVisible()))await page.getByRole('button',{name:'Back to terminals',exact:true}).click();
   await page.locator('[data-view="projects"]').click();assert.equal(await page.locator('.project-new').first().isDisabled(),true);
