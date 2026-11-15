@@ -103,7 +103,7 @@ function waitFor(fn){return new Promise((resolve,reject)=>{const deadline=Date.n
 
 test('Claude launch merges PermissionRequest command into usage settings and binds session token',async t=>{
  const service=new ApprovalService({directory:temp(t)});await service.start();t.after(()=>service.close());
- const bridge=require('../src/main/claude-usage.cjs').bridgeOptions(temp(t),'term-d',{directory:'/tmp/project'},{HOME:'/tmp'});
+ const bridge=require('../src/main/claude-usage.cjs').bridgeOptions(temp(t),'term-d',{directory:'/tmp/project'},{HOME:'/tmp',CLAUDE_CONFIG_DIR:temp(t)});
  const launched=service.launchOptions('term-d',{directory:'/tmp/project'},{provider:'claude',conversationId:'conv-d',env:bridge.env,file:'/claude',args:['--resume','conv-d'],settings:bridge.settings});
  assert.equal(launched.file,'/claude');assert.deepEqual(launched.args,['--resume','conv-d']);assert.equal(launched.settings.statusLine.type,'command');
  const hook=launched.settings.hooks.PermissionRequest[0];assert.equal(hook.matcher,'*');assert.equal(hook.hooks[0].type,'command');assert.match(hook.hooks[0].command,/claude-permission-bridge/);
